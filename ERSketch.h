@@ -39,20 +39,32 @@ public:
 
 public:
 
-    FLCSketch(int _heavepartBucketNum, int _fermatEleMem,
+    FLCSketch(int _heavepartBucketNum, int _fermatEleMem, bool _fermatcount = 1, 
                  bool usefing = USE_FING, uint32_t _init = INIT) : fermatEleMem(_fermatEleMem)
     {
         tot_packets = 0;
-        fermatEle = new Fermat(fermatEleMem, usefing, _init);
+        // fermatEle = new Fermat(fermatEleMem, usefing, _init);
+        if(_fermatcount){
+            fermatEle = new Fermat_Count(fermatEleMem, usefing, _init);
+        }
+        else{
+            fermatEle = new Fermat_Sketch(fermatEleMem, usefing, _init);
+        }
         heavy_part = new HeavyPart<bucket_num>();
         
 
     }
-    FLCSketch(int _heavepartBucketNum, int array_num, int entry_num, 
+    FLCSketch(int _heavepartBucketNum, int array_num, int entry_num, bool _fermatcount = 1, 
                  bool usefing = USE_FING, uint32_t _init = INIT)
     {
         tot_packets = 0;
-        fermatEle = new Fermat(array_num, entry_num, usefing, _init);
+        // fermatEle = new Fermat(array_num, entry_num, usefing, _init);
+        if(_fermatcount){
+            fermatEle = new Fermat_Count(array_num, entry_num, usefing, _init);
+        }
+        else{
+            fermatEle = new Fermat_Sketch(array_num, entry_num, usefing, _init);
+        }
         heavy_part = new HeavyPart<bucket_num>();
 
     }
@@ -139,7 +151,7 @@ public:
         //     printf("Key: %.8x, Value: %d\n", key, item.second);
         // }
     }
-    uint32_t query(const char *key, bool ifprint = 0)
+    uint32_t query(const char *key, bool add_undecoded = 1, bool ifprint = 0)
     {
         uint32_t hp_cnt = heavy_part->query((uint8_t *)key);
         // uint32_t heavy_result = heavy_part.query(key);
@@ -153,18 +165,16 @@ public:
                 return (int)GetCounterVal(hp_cnt) + Eleresult[*(uint32_t *)key];
 
             }
-            else{
-                int cm_query = fermatEle->CountMin_query(key);
-                
+            else if(add_undecoded){
+                int cm_query = fermatEle->undecoded_query(key);
                 // printf("Count Min Result: %d\n", cm_query);
                 // return (int)GetCounterVal(hp_cnt)
-                return (int)GetCounterVal(hp_cnt);// + cm_query;
+                return (int)GetCounterVal(hp_cnt) + cm_query;
                 // printf("Add Count Min Result: %d\n", cm_query);
                 // fermatEle->counter[][];
-
             }
         }
-        return hp_cnt;
+        return (int)GetCounterVal(hp_cnt);
 
         // if(hp_cnt < 0){
         //     printf("Negative in hp_cnt!\n");
