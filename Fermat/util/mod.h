@@ -71,6 +71,11 @@ uint64_t mulMod32(uint64_t a, uint64_t b, uint64_t c)
     return (a*b)%c;
 }
 
+int64_t mulMod32_Cnt(int64_t a, int64_t b, int64_t c)
+{
+    return (a*b)%c;
+}
+
 uint64_t powMod32(uint64_t a, uint64_t b, uint64_t c)
 {
     uint64_t ans = 1;

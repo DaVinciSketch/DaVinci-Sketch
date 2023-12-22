@@ -15,13 +15,13 @@
 
 using namespace std;
 
-#define HASH_TO_SIGN(hash_value) -1//(((hash_value) & 1) ? -1 : 1)
+#define HASH_TO_SIGN(hash_value) (((hash_value) & 1) ? -1 : 1)
 #define DEBUG_F 0
 
 // fingprint no used
 
 // use a 16-bit prime, so 2 * a mod PRIME will not overflow
-static const uint32_t PRIME_ID = MAXPRIME[31]; //PRIME for Fermat_sketch
+static const uint32_t PRIME_ID = MAXPRIME[32]; //PRIME for Fermat_sketch
 static const uint32_t PRIME_ID_COUNT = MAXPRIME[31]; //PRIME for Fermat_count
 static const uint32_t PRIME_FING = MAXPRIME[32];
 
@@ -54,6 +54,7 @@ public:
     virtual void clear_array() = 0;
 
     virtual void Insert(uint32_t flow_id, uint32_t cnt) = 0;
+    // virtual void Insert() = 0;
     virtual void Insert_one(uint32_t flow_id) = 0;
 
     virtual void Delete_in_one_bucket(int row, int col, int pure_row, int pure_col, int sign = 1) = 0;
@@ -635,36 +636,37 @@ public:
         delete[] hash;
     }
 
-    int get_sign(uint32_t flow_id, int i){
+    int get_sign(int32_t flow_id, int i){
         uint32_t pos = hash[i].run((char *)&flow_id, sizeof(uint32_t)) % entry_num;
         uint32_t kk = hash_sign[i].run((char *)&flow_id, sizeof(uint32_t));
         int sign = HASH_TO_SIGN(kk);
         return sign;
     }
+    // void Insert(uint32_t flow_id, uint32_t cnt) override {
+    //     cout << "You have entered the wrong Insert()!" << endl;
+    // }
 
     void Insert(uint32_t flow_id, uint32_t cnt) override
     {
-        // printf("You are running Fermat Count version.\n");
-        if(cnt <= 0){
-            cout << "!!!!!!!!!!!!!!!!!!!!Cnt shoudn't be negative!";
-        }
-        insertedflows[flow_id]+=cnt;
+        // printf("You are running Fermat Count version.\n");        
+        int flow_id_ = (int)flow_id;
+        insertedflows[flow_id_]+=cnt;
         if (use_fing)
         {
             uint32_t fing = hash_fp->run((char *)&flow_id, sizeof(uint32_t));
             for (int i = 0; i < array_num; ++i)
             {
-                uint32_t pos = hash[i].run((char *)&flow_id, sizeof(uint32_t)) % entry_num;
-                uint32_t kk = hash_sign[i].run((char *)&flow_id, sizeof(uint32_t));
+                uint32_t pos = hash[i].run((char *)&flow_id_, sizeof(uint32_t)) % entry_num;
+                uint32_t kk = hash_sign[i].run((char *)&flow_id_, sizeof(uint32_t));
                 int sign = HASH_TO_SIGN(kk);
                 if(sign > 0){
-                    id[i][pos] = ((int64_t)id[i][pos] + (int64_t)mulMod32(flow_id, cnt, PRIME_ID)) % PRIME_ID;
-                    fingerprint[i][pos] = ((int64_t)fingerprint[i][pos] + mulMod32(fing, cnt, PRIME_FING)) % PRIME_FING;
+                    id[i][pos] = ((int64_t)id[i][pos] + (int64_t)mulMod32_Cnt(flow_id_, cnt, PRIME_ID)) % PRIME_ID;
+                    fingerprint[i][pos] = ((int64_t)fingerprint[i][pos] + mulMod32_Cnt(fing, cnt, PRIME_FING)) % PRIME_FING;
                     counter[i][pos] += cnt;
                 }
                 else{
-                    id[i][pos] = ((int64_t)id[i][pos] - (int64_t)mulMod32(flow_id, cnt, PRIME_ID)) % PRIME_ID;
-                    fingerprint[i][pos] = ((int64_t)fingerprint[i][pos] - mulMod32(fing, cnt, PRIME_FING)) % PRIME_FING;
+                    id[i][pos] = ((int64_t)id[i][pos] - (int64_t)mulMod32_Cnt(flow_id_, cnt, PRIME_ID)) % PRIME_ID;
+                    fingerprint[i][pos] = ((int64_t)fingerprint[i][pos] - mulMod32_Cnt(fing, cnt, PRIME_FING)) % PRIME_FING;
                     counter[i][pos] -= cnt;
                 }
                 // id[i][pos] = (mulMod32(flow_id, cnt, PRIME_ID) + (uint64_t)id[i][pos]) % PRIME_ID;
@@ -677,23 +679,24 @@ public:
             for (int i = 0; i < array_num; ++i)
             {
                 // printf("I'm in %d\n", __LINE__);
-                uint32_t pos = hash[i].run((char *)&flow_id, sizeof(uint32_t)) % entry_num;
+                uint32_t pos = hash[i].run((char *)&flow_id_, sizeof(uint32_t)) % entry_num;
                 // printf("I'm in %d\n", __LINE__);
-                uint32_t kk = hash_sign[i].run((char *)&flow_id, sizeof(uint32_t));
+                uint32_t kk = hash_sign[i].run((char *)&flow_id_, sizeof(uint32_t));
                 // printf("kk = %d\n", kk);
                 // printf("I'm in %d\n", __LINE__);
                 int sign = HASH_TO_SIGN(kk);
                 // printf("Before judging in %d\n", __LINE__);
                 // cout << "Inserted flow_id: " << flow_id << " ";
                 if(sign > 0){
-                    id[i][pos] = ((int64_t)id[i][pos] + (int64_t)mulMod32(flow_id, cnt, PRIME_ID_COUNT)) % PRIME_ID_COUNT;
+                    id[i][pos] = ((int64_t)id[i][pos] + (int64_t)mulMod32_Cnt(flow_id_, cnt, PRIME_ID_COUNT)) % (int64_t)PRIME_ID_COUNT;
                     counter[i][pos] += cnt;
                 }
                 else{
                     // cout << "(int64_t)id[" << i << "][" << pos << "]=" << (int64_t)id[i][pos] << " ";
                     // cout << "mulMod32(...)=" << mulMod32(flow_id, cnt, PRIME_ID_COUNT) << " ";
                     // cout << "diff=" << ((int64_t)id[i][pos] - (int64_t)mulMod32(flow_id, cnt, PRIME_ID_COUNT)) << " ";
-                    id[i][pos] = ((int64_t)id[i][pos] - (int64_t)mulMod32(flow_id, cnt, PRIME_ID_COUNT)) % PRIME_ID_COUNT;
+                    id[i][pos] = ((int64_t)id[i][pos] - (int64_t)mulMod32_Cnt(flow_id_, cnt, PRIME_ID_COUNT)) % (int64_t)PRIME_ID_COUNT;
+                    // cout << "(After module)id[" << i << "][" << pos << "]=" << (int64_t)id[i][pos] << " ";
                     counter[i][pos] -= cnt;
                 }
                 // cout << "id[" << i << "][" << pos << "]=" << id[i][pos] << " ";
@@ -751,7 +754,10 @@ public:
         // cout << "CNT After minus: " << counter[row][col] << endl;
     }
 
-    bool verify(int row, int col, uint32_t &flow_id, uint32_t &fing) override
+    // bool verify(int row, int col, uint32_t &flow_id, uint32_t &fing) override {
+    //     cout << "You are in the wrong verify()!" << endl;
+    // }
+    bool verify(int row, int col, uint32_t &flow_id, uint32_t &fing)
     {
         // cout << "####################I'm in verify of fermat_count!\n";
 #if DEBUG_F
@@ -771,7 +777,7 @@ public:
             // cout << "\tid: " << id_value << "\tcnt: " << cnt_value << " ";
             uint64_t temp = checkTable_count(abs(cnt_value));
             // cout << "\tcnt^P: " << temp << " ";
-            flow_id = mulMod32(abs(id_value), temp, PRIME_ID_COUNT);
+            flow_id = mulMod32_Cnt(id_value, temp, PRIME_ID_COUNT);
             // cout << "\tflow_id*: " << flow_id;
         }
         // flow_id = (id[row][col] * table[counter[row][col] % PRIME_ID]) % PRIME_ID;
@@ -780,11 +786,11 @@ public:
             fing = powMod32(cnt_value, PRIME_FING - 2, PRIME_FING);
             fing = mulMod32(fingerprint[row][col], fing, PRIME_FING);
         }
-        int mapto = hash[row].run((char *)&flow_id, sizeof(uint32_t)) % entry_num;
+        int mapto = hash[row].run((char *)&flow_id, sizeof(int32_t)) % entry_num;
         // cout << "\tmapto: " << mapto << "\trealcol: " << col << endl;
         if (!(mapto == col))
             return false;
-        if (use_fing && !(hash_fp->run((char *)&flow_id, sizeof(uint32_t)) % PRIME_FING == fing))
+        if (use_fing && !(hash_fp->run((char *)&flow_id, sizeof(int32_t)) % PRIME_FING == fing))
             return false;
         return true;
     }
@@ -869,7 +875,10 @@ public:
 
         return (int)median;
     }
-    bool Decode(unordered_map<uint32_t, int> &result) override
+    // bool Decode(unordered_map<uint32_t, int> &result) override {
+    //     cout << "You are in the wrong Decode()!" << endl;
+    // }
+    bool Decode(unordered_map<uint32_t, int> &result)
     {
         // for (int i = 0; i < array_num; i++){
         //     for (int j = 0; j < entry_num; j++){
@@ -903,8 +912,8 @@ public:
         }
         decodeflag = 1;
         queue<int> *candidate = new queue<int>[array_num];
-        uint32_t flow_id = 0;
-        uint32_t fing = 0;
+        int32_t flow_id = 0;
+        int32_t fing = 0;
         // cout << endl << endl << endl << endl << endl << endl << endl << endl << endl;
         // first round
         for (int i = 0; i < array_num; ++i){
@@ -912,6 +921,8 @@ public:
             int sign = HASH_TO_SIGN(kk);
             for (int j = 0; j < entry_num; ++j)
             {
+                uint32_t temp_flow_id = 0;
+                uint32_t temp_fin = 0;
                 if (counter[i][j] == 0)
                 {
                     continue;
@@ -920,9 +931,11 @@ public:
                 //     cout << "counter[i][j] is " << counter[i][j] << " id[i][j] is " << id[i][j] << endl;
                 //     continue;
                 // }
-                else if (verify(i, j, flow_id, fing))
+                else if (verify(i, j, temp_flow_id, temp_fin))
                 {
                     // find pure bucket
+                    flow_id = (int32_t)temp_flow_id;
+                    fing = (int32_t)temp_fin;
                     if (result.count(flow_id) != 0)
                     {
                         result[flow_id] += abs(counter[i][j]);
@@ -965,14 +978,18 @@ public:
                 {
                     int check = candidate[i].front();
                     candidate[i].pop();
+                    uint32_t temp_flow_id = 0;
+                    uint32_t temp_fin = 0;
                     // cout << i << " " << check << endl;
                     if (counter[i][check] == 0)
                     {
                         continue;
                     }
-                    else if (verify(i, check, flow_id, fing))
+                    else if (verify(i, check, temp_flow_id, temp_fin))
                     {
                         // find pure bucket
+                        flow_id = (int32_t)temp_flow_id;
+                        fing = (int32_t)temp_fin;
                         if (result.count(flow_id) != 0)
                         {
                             result[flow_id] += abs(counter[i][check]);

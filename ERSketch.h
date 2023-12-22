@@ -94,18 +94,27 @@ public:
         // }
         pair<int, int> valuePair = std::make_pair(result, GetCounterVal(swap_val));
         insert_tracking[keysfing].push_back(valuePair);
-        if(keysfing == 24690453){
-            cout << "#################" << keysfing << " " << result << " " <<GetCounterVal(swap_val) << endl;
-        }
 
-        switch(result)
-        {
-            case 0: break;
-            case 1: fermatEle->Insert(*(uint32_t*) swap_key, GetCounterVal(swap_val)); break;
-            case 2: fermatEle->Insert(*(uint32_t*) key, 1); break;
-            default:
-                printf("error return value !\n");
-                exit(1);
+        if(!ifFermatCount)
+            switch(result)
+            {
+                case 0: break;
+                case 1: fermatEle->Insert(*(uint32_t*) swap_key, GetCounterVal(swap_val)); break;
+                case 2: fermatEle->Insert(*(uint32_t*) key, 1); break;
+                default:
+                    printf("error return value !\n");
+                    exit(1);
+            }
+        else{
+            switch(result)
+            {
+                case 0: break;
+                case 1: fermatEle->Insert(*(int32_t*) swap_key, GetCounterVal(swap_val)); break;
+                case 2: fermatEle->Insert(*(int32_t*) key, 1); break;
+                default:
+                    printf("error return value !\n");
+                    exit(1);
+            }
         }
 
         // printf("After Insert in ERSketch switch\n");
