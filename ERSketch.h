@@ -26,6 +26,7 @@ public:
     int tot_packets;
     int fermatEleMem;
     int towerfilterMem;
+    bool ifFermatCount;
     // TowerSketch *towerfilter;
     unordered_map<uint32_t, int> Eleresult;
     EMFSD1 *em = NULL;
@@ -37,10 +38,13 @@ public:
     HeavyPart<bucket_num> *heavy_part;
     Fermat *fermatEle;
 
+    //for test track
+    unordered_map<uint32_t, vector<pair<int, int>>> insert_tracking;
+
 public:
 
     FLCSketch(int _heavepartBucketNum, int _fermatEleMem, bool _fermatcount = 1, 
-                 bool usefing = USE_FING, uint32_t _init = INIT) : fermatEleMem(_fermatEleMem)
+                 bool usefing = USE_FING, uint32_t _init = INIT) : fermatEleMem(_fermatEleMem), ifFermatCount(_fermatcount)
     {
         tot_packets = 0;
         // fermatEle = new Fermat(fermatEleMem, usefing, _init);
@@ -73,11 +77,31 @@ public:
         //heavy part
         uint8_t swap_key[KEY_LENGTH_4];
         uint32_t swap_val = 0;
+        
+        //tracking 
         int result = heavy_part->insert((uint8_t *)key, swap_key, swap_val, f);
+        uint32_t keysfing = *(uint32_t *)key;
+        if(result == 1) {
+            keysfing = *(uint32_t *)swap_key;
+        }
+        else if(result == 2){
+            swap_val = 1;
+        }
+
+        int sign = 1;
+        // if(ifFermatCount){
+        //     sign = fermatEle->get_sign(key, 2);
+        // }
+        pair<int, int> valuePair = std::make_pair(result, GetCounterVal(swap_val));
+        insert_tracking[keysfing].push_back(valuePair);
+        if(keysfing == 24690453){
+            cout << "#################" << keysfing << " " << result << " " <<GetCounterVal(swap_val) << endl;
+        }
+
         switch(result)
         {
             case 0: break;
-            case 1: fermatEle->Insert(*(uint32_t*) key, GetCounterVal(swap_val)); break;
+            case 1: fermatEle->Insert(*(uint32_t*) swap_key, GetCounterVal(swap_val)); break;
             case 2: fermatEle->Insert(*(uint32_t*) key, 1); break;
             default:
                 printf("error return value !\n");
