@@ -24,6 +24,7 @@ using namespace std;
 #define BUCKET_NUM (HEAVY_MEM / 64)
 // #define TOT_MEM_IN_BYTES (600 * 1024)
 #define TOT_MEM_IN_BYTES (600 * 1024)
+#define ES_MEM_IN_BYTES (600 * 1024)
 
 struct FIVE_TUPLE{	char key[13];	};
 typedef vector<FIVE_TUPLE> TRACE;
@@ -61,25 +62,32 @@ void ReadInTraces(const char *trace_prefix)
 	printf("\n");
 }
 
-void run_elastic(const std::string &str = NULL){
+void run_elastic(int _num_heavy_bucket = BUCKET_NUM, int _light_mem_byte = TOT_MEM_IN_BYTES - BUCKET_NUM*8*8, const std::string &str = NULL){
 	
 	ElasticSketch<BUCKET_NUM, TOT_MEM_IN_BYTES> *elastic = NULL;
 	for(int datafileCnt = START_FILE_NO; datafileCnt <= END_FILE_NO; ++datafileCnt)
 	{
 		unordered_map<string, int> Real_Freq;
-		elastic = new ElasticSketch<BUCKET_NUM, TOT_MEM_IN_BYTES>();
+		cout << "Gonna init ElasticSketch!" << endl;
+		elastic = new ElasticSketch<BUCKET_NUM, TOT_MEM_IN_BYTES>(_num_heavy_bucket, _light_mem_byte);
+		cout << "Init ElasticSketch over!" << endl;
 
 		auto start_insert = std::chrono::high_resolution_clock::now();
-		int packet_cnt = (int)traces[datafileCnt - 1].size();
+		int packet_cnt = (int)traces[datafileCnt - 1].size() / 2;
 		for(int i = 0; i < packet_cnt; ++i)
 		{
 			elastic->insert((uint8_t*)(traces[datafileCnt - 1][i].key));
+			// cout << "Return from elastic insert" << endl;
 			// elastic->quick_insert((uint8_t*)(traces[datafileCnt - 1][i].key));
 
 			string str((const char*)(traces[datafileCnt - 1][i].key), 4);
+			// cout << "Build a string of key str=" << *(uint32_t*)(traces[datafileCnt - 1][i].key) << endl;
 			Real_Freq[str]++;
+			// cout << "Add related Realfreq" << endl;
 		}
 		auto start_query = std::chrono::high_resolution_clock::now();
+		
+		cout << "Insert ElasticSketch over!" << endl;
 
 		double ARE = 0;
 		for(unordered_map<string, int>::iterator it = Real_Freq.begin(); it != Real_Freq.end(); ++it)
@@ -104,7 +112,7 @@ void run_elastic(const std::string &str = NULL){
 		printf("-------------------------------------------------------------------------------\n");
 		delete elastic;
 		Real_Freq.clear();
-		outfile << ",,,,,,," << ARE << "," << insert_duration << ",," << query_duration << endl;
+		outfile << "ElasticSketch,-,-,-,1," << _light_mem_byte << "," << _light_mem_byte << ",-,-," << ARE << "," << insert_duration << ",," << query_duration << endl;
 	}
 
 	taskno++;
@@ -122,7 +130,7 @@ void run_flc(bool _fermatcount = 1, bool _addundecodec = 1, int array_num = 3, i
 		// elastic = new ElasticSketch<BUCKET_NUM, TOT_MEM_IN_BYTES>();
 		flcsketch = new FLCSketch<bucket_num>(BUCKET_NUM, array_num, entry_num, _fermatcount, _fing, INIT);
 
-		int packet_cnt = (int)traces[datafileCnt - 1].size();
+		int packet_cnt = (int)traces[datafileCnt - 1].size() / 2;
         // packet_cnt = incluingpacketnum;
 		// printf("Before Insert\n");
 		auto start_insert = std::chrono::high_resolution_clock::now();
@@ -221,7 +229,7 @@ void run_flc(bool _fermatcount = 1, bool _addundecodec = 1, int array_num = 3, i
 						// if(real_cnt - heavycnt - elem.second == 0){
 						// 	continue;
 						// }
-						outFile << elem.first << "," << heavycnt << ",," << elem.second << "," << real_cnt << "," << real_cnt - heavycnt - elem.second << ",";
+						outFile << elem.first << "," << heavycnt << ",," << elem.second << "," << real_cnt << "," << real_cnt - heavycnt << ",";
 
 						uint32_t key = elem.first; // 指定您想要输出的键
 						// 检查 key 是否存在
@@ -253,7 +261,7 @@ void run_flc(bool _fermatcount = 1, bool _addundecodec = 1, int array_num = 3, i
 						// 如果键同时存在于两个字典中
 						if(real_cnt - heavycnt - flcsketch->Eleresult[elem.first] == 0){
 							decode_cor ++;
-							continue;
+							// continue;
 						}
 						else{
 							decode_fal ++;
@@ -289,6 +297,7 @@ void run_flc(bool _fermatcount = 1, bool _addundecodec = 1, int array_num = 3, i
 		int cnt_fermat_inserted = flcsketch->fermatEle->insertedflows.size();
 		double decodesrate = 100 * decodedNum / cnt_fermat_inserted;
 		cout << "decodedNum: " << decodedNum << ", cnt_fermat_inserted: " << cnt_fermat_inserted << endl;
+		outfile << "Radar,";
 		if(_fermatcount) outfile << "yes" << ",";
 		else outfile << "no" << ",";
 		if(_addundecodec) outfile << "yes" << ",";
@@ -298,7 +307,7 @@ void run_flc(bool _fermatcount = 1, bool _addundecodec = 1, int array_num = 3, i
 		else outfile << "no" << ',' << array_num << ',';
 		// if(entry_num == (TOT_MEM_IN_BYTES - HEAVY_MEM)) outfile << "Same Entry Num" << ',';
 		// else outfile << "Same Mem" << ',';
-		outfile << entry_num << ",";
+		outfile << entry_num << "," << array_num*entry_num*8 << ",";
 		outfile << decodedNum << ',' << decodesrate << '%' << ',' << ARE << ',' << insert_duration << ',' << decode_duration << ',' << query_duration << endl;
 
 
@@ -477,7 +486,7 @@ void two_counters_diff(bool _fermatcount = 1, bool _addundecodec = 1, int array_
 int main()
 {
 	ReadInTraces("./datasample/");
-	outfile << "UsingFermatCount,AddUndecoded,FingerPrint,ArrayNum,LightEntryNum,DecodedNum,DecodedRate,ARE,InsertTime,DecodeTime,QueryTime\n";
+	outfile << "Type,UsingFermatCount,AddUndecoded,FingerPrint,ArrayNum,LightEntryNum,LightTotalMem,DecodedNum,DecodedRate,ARE,InsertTime,DecodeTime,QueryTime\n";
 	// cout << 71%11 << " " << (-71)%11 << " " << 71%(-11) << " " << (-71)%(-11) << " " ;
 	// run_flc(true, true, 3, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10/(3 * 12), true, "With finger 3 arrays Same Mem"); //Same Mem
 	// run_flc(true, true, 3, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10, true, "With finger 3 arrays Same total num of entry"); //Same total num of entry
@@ -491,7 +500,7 @@ int main()
 	// run_flc(true, false, 3, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10/(3 * 12), true, "With finger 3 arrays Same Mem"); //Same Mem
 	// run_flc(true, false, 3, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10, true, "With finger 3 arrays Same total num of entry"); //Same total num of entry
 	// run_flc(true, false, 3, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10/(3 * 8), false, "No finger 3 arrays and Same Mem"); //Same Mem
-	run_flc(true, false, 3, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10, false, "No finger 3 arrays and Same single array's num of entry"); //Same single array's num of entry
+	// run_flc(true, false, 3, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10, false, "No finger 3 arrays and Same single array's num of entry"); //Same single array's num of entry
 	// run_flc(true, false, 1, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10/(1 * 12), true, "With finger 1 array and Same Mem"); //Same Mem
 	// run_flc(true, false, 1, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10, true, "With finger 1 array and Same total num of entry");//Same total num of entry
 	// run_flc(true, false, 1, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10/(1 * 8), false, "No finger 1 array and Same Mem"); //Same Mem
@@ -500,7 +509,7 @@ int main()
 	// run_flc(false, true, 3, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10/(3 * 12), true, "With finger 3 arrays Same Mem"); //Same Mem
 	// run_flc(false, true, 3, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10, true, "With finger 3 arrays Same total num of entry"); //Same total num of entry
 	// run_flc(false, true, 3, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10/(3 * 8), false, "No finger 3 arrays and Same Mem"); //Same Mem
-	run_flc(false, true, 3, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10, false, "No finger 3 arrays and Same single array's num of entry"); //Same single array's num of entry
+	// run_flc(false, true, 3, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10, false, "No finger 3 arrays and Same single array's num of entry"); //Same single array's num of entry
 	// run_flc(false, true, 1, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10/(1 * 12), true, "With finger 1 array and Same Mem"); //Same Mem
 	// run_flc(false, true, 1, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10, true, "With finger 1 array and Same total num of entry");//Same total num of entry
 	// run_flc(false, true, 1, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10/(1 * 8), false, "No finger 1 array and Same Mem"); //Same Mem
@@ -514,7 +523,40 @@ int main()
 	// run_flc(false, false, 1, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10, true, "With finger 1 array and Same total num of entry");//Same total num of entry
 	// run_flc(false, false, 1, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10/(1 * 8), false, "No finger 1 array and Same Mem"); //Same Mem
 	// run_flc(false, false, 1, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10, false, "No finger 1 Same total num of entry"); //Same total num of entry
-	// run_elastic("Original Elastic Sketch"); //Original Elastic Sketch
+	
+	// for(int i = 1;i<=20;i++){
+	// 	run_flc(true, true, 3, i*(TOT_MEM_IN_BYTES - HEAVY_MEM), false, "No finger 3 arrays and Same Entry Num per Array"); //Same single array's num of entry
+	// 	run_flc(false, true, 3, i*(TOT_MEM_IN_BYTES - HEAVY_MEM), false, "No finger 3 arrays and Same Entry Num per Array"); //Same single array's num of entry
+		
+	// 	run_elastic(BUCKET_NUM, i*(TOT_MEM_IN_BYTES - HEAVY_MEM), "Original Elastic Sketch"); //Original Elastic Sketch
+		
+	// }
+	// for(int i = -2;i<3;i++){
+	// 	run_flc(true, true, 3, (int)((pow(10, i))*(TOT_MEM_IN_BYTES - HEAVY_MEM)), false, "No finger 3 arrays and Entry Num per Array"); //Same single array's num of entry
+	// 	run_flc(false, true, 3, (int)((pow(10, i))*(TOT_MEM_IN_BYTES - HEAVY_MEM)), false, "No finger 3 arrays and Entry Num per Array"); //Same single array's num of entry
+		
+	// 	run_elastic(BUCKET_NUM, (int)((pow(10, i))*(TOT_MEM_IN_BYTES - HEAVY_MEM)), "Original Elastic Sketch"); //Original Elastic Sketch
+	// }
+	// for(int i = 1;i<=20;i++){
+	// 	run_flc(true, true, 3, i*(TOT_MEM_IN_BYTES - HEAVY_MEM)/(3*8), false, "No finger 3 arrays and Same Mem"); //Same single array's num of entry
+	// 	run_flc(false, true, 3, i*(TOT_MEM_IN_BYTES - HEAVY_MEM)/(3*8), false, "No finger 3 arrays and Same Mem"); //Same single array's num of entry
+	// 	run_elastic(BUCKET_NUM, i*(TOT_MEM_IN_BYTES - HEAVY_MEM), "Original Elastic Sketch"); //Original Elastic Sketch
+	// }
+	// for(int i = -2;i<3;i++){
+	// 	run_flc(true, true, 3, (int)((pow(10, i))*(TOT_MEM_IN_BYTES - HEAVY_MEM)/(3*8)), false, "No finger 3 arrays and Same Mem"); //Same single array's num of entry
+	// 	run_flc(false, true, 3, (int)((pow(10, i))*(TOT_MEM_IN_BYTES - HEAVY_MEM)/(3*8)), false, "No finger 3 arrays and Same Mem"); //Same single array's num of entry
+	// 	run_elastic(BUCKET_NUM, (int)((pow(10, i))*(TOT_MEM_IN_BYTES - HEAVY_MEM)), "Original Elastic Sketch"); //Original Elastic Sketch
+	// }
+
+	// for(int i = 1;i<=20;i++){
+	// 	cout << int(i*(TOT_MEM_IN_BYTES - HEAVY_MEM))  << " " << (int64_t) i*(TOT_MEM_IN_BYTES - HEAVY_MEM) << endl;
+	// 	cout << int(i*(TOT_MEM_IN_BYTES - HEAVY_MEM))*24  << " " << (int64_t) i*(TOT_MEM_IN_BYTES - HEAVY_MEM)*24 << endl;
+	// }
+	// cout <<"---"<<endl;
+	// for(int i = 0;i<=3;i++){
+	// 	cout << int((pow(10, i))*(TOT_MEM_IN_BYTES - HEAVY_MEM)) << " " << (int64_t) ((pow(10, i))*(TOT_MEM_IN_BYTES - HEAVY_MEM)) << endl;
+	// 	cout << int((pow(10, i))*(TOT_MEM_IN_BYTES - HEAVY_MEM)*24) << " " << (int64_t) ((pow(10, i))*(int64_t)((int64_t)TOT_MEM_IN_BYTES - (int64_t)HEAVY_MEM)*(int64_t)24) << endl;
+	// }
 
 	// two_counters_diff(true, true, 3, (TOT_MEM_IN_BYTES - HEAVY_MEM)*10, false, "No finger 3 arrays and Same single array's num of entry");
 

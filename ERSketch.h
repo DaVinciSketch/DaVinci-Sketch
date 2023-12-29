@@ -28,7 +28,6 @@ public:
     int towerfilterMem;
     bool ifFermatCount;
     // TowerSketch *towerfilter;
-    unordered_map<uint32_t, int> Eleresult;
     EMFSD1 *em = NULL;
 
     // int bucket_num;
@@ -39,7 +38,8 @@ public:
     Fermat *fermatEle;
 
     //for test track
-    unordered_map<uint32_t, vector<pair<int, int>>> insert_tracking;
+    unordered_map<int32_t, int> Eleresult;
+    unordered_map<int32_t, vector<pair<int, int>>> insert_tracking;
 
 public:
 
@@ -54,7 +54,7 @@ public:
         else{
             fermatEle = new Fermat_Sketch(fermatEleMem, usefing, _init);
         }
-        heavy_part = new HeavyPart<bucket_num>();
+        heavy_part = new HeavyPart<bucket_num>(bucket_num);
         
 
     }
@@ -69,7 +69,7 @@ public:
         else{
             fermatEle = new Fermat_Sketch(array_num, entry_num, usefing, _init);
         }
-        heavy_part = new HeavyPart<bucket_num>();
+        heavy_part = new HeavyPart<bucket_num>(bucket_num);
 
     }
     void insert(const char *key, int f = 1)
@@ -168,11 +168,16 @@ public:
 
     int decode()
     {
-        // printf("Decoding......\n");
-        if (fermatEle->Decode(Eleresult))
+        // printf("Decoding...... Eleresult.size() = %d\n", Eleresult.size());
+        // 创建 DataVariant 类型的实例
+        DataVariant variantEleresult = Eleresult;
+
+        // 现在，您可以将 variantEleresult 传递给 Decode 函数
+        if (fermatEle->Decode(variantEleresult)) 
             printf("Decode Successfully!\n");
         else
             printf("Decode Fail!\n");
+        Eleresult = std::get<std::unordered_map<int, int>>(variantEleresult);
         printf("Eleresult: %lu\n", Eleresult.size());
         return Eleresult.size();
             // 遍历并打印 Eleresult 中的每个元素

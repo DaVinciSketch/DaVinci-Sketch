@@ -8,8 +8,9 @@ template<int bucket_num>
 class HeavyPart
 {
 public:
-    alignas(64) Bucket buckets[bucket_num];
-    HeavyPart();
+    int num_bucket;
+    alignas(64) Bucket* buckets;//[bucket_num];
+    HeavyPart(int _num_bucket);
     ~HeavyPart();
 
     void clear();

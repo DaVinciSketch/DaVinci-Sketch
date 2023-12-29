@@ -7,8 +7,10 @@
 #endif // USING_SIMD_ACCELERATION
 
 template<int bucket_num>
-HeavyPart<bucket_num>::HeavyPart()
+HeavyPart<bucket_num>::HeavyPart(int _num_bucket)
 {
+	buckets = new Bucket[_num_bucket];
+	num_bucket = _num_bucket;
     this->clear();
 }
 
@@ -18,7 +20,8 @@ HeavyPart<bucket_num>::~HeavyPart(){}
 template<int bucket_num>
 void HeavyPart<bucket_num>::clear()
 {
-    memset(buckets, 0, sizeof(Bucket) * bucket_num);
+    // memset(buckets, 0, sizeof(Bucket) * bucket_num);
+    memset(buckets, 0, sizeof(Bucket) * num_bucket);
 }
 
 template<int bucket_num>
@@ -280,18 +283,21 @@ int HeavyPart<bucket_num>::query(uint8_t *key)
 template<int bucket_num>
 int HeavyPart<bucket_num>::get_memory_usage()
 {
-    return bucket_num * sizeof(Bucket);
+    // return bucket_num * sizeof(Bucket);
+    return num_bucket * sizeof(Bucket);
 }
 
 template<int bucket_num>
 int HeavyPart<bucket_num>::get_bucket_num()
 {
-    return bucket_num;
+    // return bucket_num;
+    return num_bucket;
 }
 
 template<int bucket_num>
 int HeavyPart<bucket_num>::CalculateFP(uint8_t *key, uint32_t &fp)
 {
     fp = *((uint32_t*)key);
-    return CalculateBucketPos(fp) % bucket_num;
+    // return CalculateBucketPos(fp) % bucket_num;
+    return CalculateBucketPos(fp) % num_bucket;
 }

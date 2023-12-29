@@ -12,6 +12,7 @@
 #include "murmur3.h"
 #include <vector>
 #include <algorithm>
+#include <variant>
 
 using namespace std;
 
@@ -37,15 +38,17 @@ inline uint64_t checkTable_count(uint64_t pos)
     return powMod32(pos, PRIME_ID_COUNT - 2, PRIME_ID_COUNT);
 }
 
+using DataVariant = std::variant<std::unordered_map<int, int>, std::unordered_map<unsigned int, int>>;
+
 class Fermat
 {
     // bool use_fing;
-    
+
 
 public:
 
     int pure_cnt;
-    unordered_map<uint32_t, int> insertedflows;
+    unordered_map<int32_t, int> insertedflows;
 
     
 
@@ -64,7 +67,9 @@ public:
     virtual void display() = 0;
     virtual int query(const char *key) = 0;
     virtual int undecoded_query(const char *key) = 0;
-    virtual bool Decode(unordered_map<uint32_t, int> &result) = 0;
+    // virtual bool Decode(unordered_map<uint32_t, int> &result);
+    // virtual bool Decode(unordered_map<int32_t, int> &result);
+    virtual bool Decode(DataVariant& data) = 0;
     virtual int get_id(int n_array, int n) = 0;
     virtual int get_counter(int n_array, int n) = 0;
     
@@ -333,8 +338,16 @@ public:
         
         return (int)ret;
     }
-    bool Decode(unordered_map<uint32_t, int> &result) override
+    // bool Decode(unordered_map<uint32_t, int> &result) override
+    bool Decode(DataVariant& data) override
     {
+        auto* mapPtr = std::get_if<std::unordered_map<unsigned int, int>>(&data);
+        if (!mapPtr) {
+            return false;  // 如果类型不匹配，则直接返回 false
+        }
+        
+        auto& result = *mapPtr;
+        
         // for (int i = 0; i < array_num; i++){
         //     for (int j = 0; j < entry_num; j++){
         //         cout << counter[i][j] << " ";
@@ -878,8 +891,17 @@ public:
     // bool Decode(unordered_map<uint32_t, int> &result) override {
     //     cout << "You are in the wrong Decode()!" << endl;
     // }
-    bool Decode(unordered_map<uint32_t, int> &result)
+    // bool Decode(unordered_map<int32_t, int> &result)
+    bool Decode(DataVariant& data) override
     {
+        auto* mapPtr = std::get_if<std::unordered_map<int32_t, int>>(&data);
+        if (!mapPtr) {
+            return false;  // 如果类型不匹配，则直接返回 false
+        }
+        
+        auto& result = *mapPtr;
+
+        cout << "The size of the converted Variant map in fermat_count: " << result.size() << endl;
         // for (int i = 0; i < array_num; i++){
         //     for (int j = 0; j < entry_num; j++){
         //         cout << counter[i][j] << " ";

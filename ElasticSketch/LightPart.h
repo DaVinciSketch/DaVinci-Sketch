@@ -8,13 +8,14 @@ template<int init_mem_in_bytes>
 class LightPart
 {
 	static constexpr int counter_num = init_mem_in_bytes;
+	int num_counter;
 	BOBHash32 *bobhash = NULL;
 
-	uint8_t counters[counter_num];
+	uint8_t *counters;//[counter_num];
 	int mice_dist[256];
 	EMFSD *em_fsd_algo = NULL;
 public:
-	LightPart();
+	LightPart(int _num_counter);
 	~LightPart();
 
 	void clear();
