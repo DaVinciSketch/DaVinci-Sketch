@@ -43,13 +43,17 @@ public:
 
 public:
 
-    FLCSketch(int _heavepartBucketNum, int _fermatEleMem, bool _fermatcount = 1, 
-                 bool usefing = USE_FING, uint32_t _init = INIT) : fermatEleMem(_fermatEleMem), ifFermatCount(_fermatcount)
+    FLCSketch(int _heavepartBucketNum, int _fermatEleMem, int _fermatcount = 1, 
+                 bool usefing = USE_FING, uint32_t _init = INIT) : fermatEleMem(_fermatEleMem), ifFermatCount(_fermatcount>0)
     {
         tot_packets = 0;
         // fermatEle = new Fermat(fermatEleMem, usefing, _init);
-        if(_fermatcount){
+        if(_fermatcount == 1){
             fermatEle = new Fermat_Count(fermatEleMem, usefing, _init);
+        }
+        else if(_fermatcount == 2){
+            cout << "Running Fermat_Count_IDP_CNTPM" << endl;
+            fermatEle = new Fermat_Count_IDP_CNTPM(fermatEleMem, usefing, _init);
         }
         else{
             fermatEle = new Fermat_Sketch(fermatEleMem, usefing, _init);
@@ -58,17 +62,23 @@ public:
         
 
     }
-    FLCSketch(int _heavepartBucketNum, int array_num, int entry_num, bool _fermatcount = 1, 
+    FLCSketch(int _heavepartBucketNum, int array_num, int entry_num, int _fermatcount = 1, 
                  bool usefing = USE_FING, uint32_t _init = INIT)
     {
+        ifFermatCount = (_fermatcount > 0);
         tot_packets = 0;
         // fermatEle = new Fermat(array_num, entry_num, usefing, _init);
-        if(_fermatcount){
+        if(_fermatcount == 1){
             fermatEle = new Fermat_Count(array_num, entry_num, usefing, _init);
+        }
+        else if(_fermatcount == 2){
+            cout << "Running Fermat_Count_IDP_CNTPM, fermatEleMem = " << fermatEleMem << endl;
+            fermatEle = new Fermat_Count_IDP_CNTPM(array_num, entry_num, usefing, _init);
         }
         else{
             fermatEle = new Fermat_Sketch(array_num, entry_num, usefing, _init);
         }
+        // fermatEle = new Fermat_Count_IDP_CNTPM(fermatEleMem, usefing, _init);
         heavy_part = new HeavyPart<bucket_num>(bucket_num);
 
     }
@@ -81,7 +91,7 @@ public:
         //tracking 
         int result = heavy_part->insert((uint8_t *)key, swap_key, swap_val, f);
         uint32_t keysfing = *(uint32_t *)key;
-        if(result == 1) {
+        if(result == 1) { // Swap out entry
             keysfing = *(uint32_t *)swap_key;
         }
         else if(result == 2){
@@ -98,8 +108,8 @@ public:
         if(!ifFermatCount)
             switch(result)
             {
-                case 0: break;
-                case 1: fermatEle->Insert(*(uint32_t*) swap_key, GetCounterVal(swap_val)); break;
+                case 0: break; // Inserted into the heavy part and nothing to do with the light part
+                case 1: fermatEle->Insert(*(uint32_t*) swap_key, GetCounterVal(swap_val)); break;//
                 case 2: fermatEle->Insert(*(uint32_t*) key, 1); break;
                 default:
                     printf("error return value !\n");
