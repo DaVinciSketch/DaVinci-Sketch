@@ -13,7 +13,7 @@
 #include <vector>
 #include <algorithm>
 #include <variant>
-
+#include <cassert>
 using namespace std;
 
 #define HASH_TO_SIGN(hash_value) (((hash_value) & 1) ? -1 : 1)
@@ -81,7 +81,34 @@ public:
 
     virtual int get_array_num() = 0;
     virtual int get_entry_num() = 0;
+
+    virtual int query_from_cpy(const char *key){
+        cout << "query_from_cpy() is not implemented in root class!" << endl;
+        return -1;
+    }
+    virtual int query_after_decoding(const char *key){
+        cout << "query_after_decoding() is not implemented in root class!" << endl;
+        return -1;
+    }
+    virtual int undecoded_query_before_decoding(const char *key){
+        cout << "undecoded_query_before_decoding() is not implemented in root class!" << endl;
+        return -1;
+    }
+
+    bool cpy_counters(){ 
+        cout << "cpy_counters() is not implemented!" << endl;
+        return false;
+    }
+
+    virtual bool cpy_counters_to_pos(int32_t ***countercpy){
+        cout << "cpy_counters_to() is not implemented!" << endl;
+        return false;
+    }
     
+    virtual int query_array(const char *key, int array_index){
+        cout << "query_array() is not implemented in root class!" << endl;
+        return -1;
+    }
 
     virtual ~Fermat() {};
 };
@@ -347,6 +374,10 @@ public:
         
         return (int)ret;
     }
+    int undecoded_query_before_decoding(const char *key) override {
+        cout << "Undecoded query of fermat_sketch is not implemented!" << endl;
+        return -1;
+    }
     // bool Decode(unordered_map<uint32_t, int> &result) override
     bool Decode(DataVariant& data) override
     {
@@ -521,7 +552,7 @@ public:
             return 0;
         }
         else{
-            cout << "set_id() out of range!" << endl;
+            cout << "set_id() out of range! " << n_array << "/" << array_num << " " << n << "/" << entry_num << endl;
             assert(0);
         }
     }
@@ -898,18 +929,19 @@ public:
             uint32_t kk = hash_sign[i].run((char *)&flow_id, sizeof(uint32_t));
             int sign = HASH_TO_SIGN(kk);
             values.push_back(countercpy[i][pos]*sign);
-            values_from_changed_counters.push_back(counter[i][pos]*sign);
-            // cout << counter[i][pos]*sign << " ";
+            // values_from_changed_counters.push_back(counter[i][pos]*sign);
+            cout << countercpy[i][pos]*sign << " ";
         }
         // cout<<endl;
 
+        cout << "The size of the values in fermat_count: " << values.size() << endl;
 
         // 找到中位数
         size_t median_index = values.size() / 2;
         std::nth_element(values.begin(), values.begin() + median_index, values.end());
-        std::nth_element(values_from_changed_counters.begin(), values_from_changed_counters.begin() + median_index, values_from_changed_counters.end());
+        // std::nth_element(values_from_changed_counters.begin(), values_from_changed_counters.begin() + median_index, values_from_changed_counters.end());
         int32_t median = values[median_index];
-        int32_t median_from = values_from_changed_counters[median_index];
+        // int32_t median_from = values_from_changed_counters[median_index];
 
         // if(median != median_from)
         //     cout << "(" << median << ", " << median_from << ") ";
@@ -922,6 +954,7 @@ public:
 
         return (int)median;
     }
+    
     // bool Decode(unordered_map<uint32_t, int> &result) override {
     //     cout << "You are in the wrong Decode()!" << endl;
     // }
@@ -1432,7 +1465,7 @@ public:
 #if DEBUG_F
         ++pure_cnt;
 #endif
-        uint32_t checked_id = 3393094456;
+        uint32_t checked_id = 3458834590;
         int32_t cnt_value = counter[row][col];
         uint32_t id_value = id[row][col];
         uint64_t temp = 0;
@@ -1504,10 +1537,14 @@ public:
             }
         }
     }
+    
     int query(const char *key) override
     {
+        // cout << "You are in the query()!" << endl;
         uint32_t flow_id = *(uint32_t *)key;
+        return abs(counter[0][hash[0].run((char *)&flow_id, sizeof(uint32_t)) % entry_num]);
         uint32_t ret = 1 << 30;
+        // cout << "docodeflag = " << decodeflag << endl;
         if (decodeflag)
         {
             for (int i = 0; i < array_num; ++i)
@@ -1520,6 +1557,36 @@ public:
         }
         return (int)ret;
     }
+
+    int query_array(const char *key, int array_index) override
+    {
+        uint32_t flow_id = *(uint32_t *)key;
+        return abs(counter[array_index][hash[array_index].run((char *)&flow_id, sizeof(uint32_t)) % entry_num]);
+        uint32_t ret = 1 << 30;
+        if (decodeflag)
+        {
+            uint32_t pos = hash[array_index].run((char *)&flow_id, sizeof(uint32_t)) % entry_num;
+            return counter[array_index][pos];
+        }
+        return (int)ret;
+    }
+
+    // int query_from_cpy(const char *key) override
+    // {
+    //     uint32_t flow_id = *(uint32_t *)key;
+    //     uint32_t ret = 1 << 30;
+    //     if (decodeflag)
+    //     {
+    //         for (int i = 0; i < array_num; ++i)
+    //         {
+    //             uint32_t pos = hash[i].run((char *)&flow_id, sizeof(uint32_t)) % entry_num;
+    //             if(ret > countercpy[i][pos]) return countercpy[i][pos];
+    //             else return ret;
+    //             // ret = min(counter[i][pos], ret);
+    //         }
+    //     }
+    //     return (int)ret;
+    // }
     // int CountMin_query(const char *key)
     // {
     //     uint32_t flow_id = *(uint32_t *)key;
@@ -1535,6 +1602,18 @@ public:
     int undecoded_query(const char *key) override
     {
         // printf("Calculating Medium!\n");
+        //if countercpy is not defined
+        if (countercpy == NULL)
+        {
+            cout << "countercpy is not defined!" << endl;
+            if(cpy_counters()){
+                cout << "countercpy defined!" << endl;
+            }
+            else{
+                cout << "countercpy define failed!" << endl;
+                return -1;
+            }
+        }
         uint32_t flow_id = *(uint32_t *)key;
         std::vector<int32_t> values;
         std::vector<int32_t> values_from_changed_counters;
@@ -1546,6 +1625,9 @@ public:
             uint32_t kk = hash_sign[i].run((char *)&flow_id, sizeof(uint32_t));
             int sign = HASH_TO_SIGN(kk);
             values.push_back(countercpy[i][pos]*sign);
+            if(countercpy[i][pos]*sign < 0){
+                cout << "countercpy[" << i << "][" << pos << "] = " << countercpy[i][pos] << " sign = " << sign << ", key = " << flow_id << endl;
+            }
             values_from_changed_counters.push_back(counter[i][pos]*sign);
             // cout << counter[i][pos]*sign << " ";
         }
@@ -1570,10 +1652,84 @@ public:
 
         return (int)median;
     }
+    int undecoded_query_before_decoding(const char *key) override
+    {
+        // printf("Calculating Medium in Fermat_Count_IDP_CNTPM!\n");
+        uint32_t flow_id = *(uint32_t *)key;
+        std::vector<int32_t> values;
+
+        for (int i = 0; i < array_num; ++i)
+        {
+            uint32_t pos = hash[i].run((char *)&flow_id, sizeof(uint32_t)) % entry_num;
+            
+            uint32_t kk = hash_sign[i].run((char *)&flow_id, sizeof(uint32_t));
+            int sign = HASH_TO_SIGN(kk);
+            values.push_back(counter[i][pos]*sign);
+            // values_from_changed_counters.push_back(counter[i][pos]*sign);
+            cout << counter[i][pos]*sign << " ";
+        }
+
+        // cout << "The size of the values in fermat_count: " << values.size() << endl;
+
+        // 找到中位数
+        size_t median_index = values.size() / 2;
+        std::nth_element(values.begin(), values.begin() + median_index, values.end());
+        // std::nth_element(values_from_changed_counters.begin(), values_from_changed_counters.begin() + median_index, values_from_changed_counters.end());
+        int32_t median = values[median_index];
+        // int32_t median_from = values_from_changed_counters[median_index];
+
+        // if(median != median_from)
+        //     cout << "(" << median << ", " << median_from << ") ";
+
+        // 如果数组大小为偶数，则还需要找到下一个元素，取平均值
+        if (values.size() % 2 == 0) {
+            int32_t next_median = *std::max_element(values.begin(), values.begin() + median_index);
+            median = (median + next_median) / 2;
+        }
+
+        return (int)median;
+    }
     // bool Decode(unordered_map<uint32_t, int> &result) override {
     //     cout << "You are in the wrong Decode()!" << endl;
     // }
     // bool Decode(unordered_map<int32_t, int> &result)
+    bool cpy_counters_to_pos(int32_t ***counterdst){
+        *counterdst = new int32_t *[array_num];
+        for (int i = 0; i < array_num; i++)
+        {
+            (*counterdst)[i] = new int32_t[entry_num];
+            for (int j = 0; j < entry_num; j++)
+                (*counterdst)[i][j] = abs(counter[i][j]);
+        }
+        return true;
+    }
+    bool cpy_counters(){
+        idcpy = new uint32_t *[array_num];
+        for (int i = 0; i < array_num; i++)
+        {
+            idcpy[i] = new uint32_t[entry_num];
+            for (int j = 0; j < entry_num; j++)
+                idcpy[i][j] = id[i][j];
+        }
+        if (use_fing)
+        {
+            fingcpy = new int32_t *[array_num];
+            for (int i = 0; i < array_num; i++)
+            {
+                fingcpy[i] = new int32_t[entry_num];
+                for (int j = 0; j < entry_num; j++)
+                    fingcpy[i][j] = fingerprint[i][j];
+            }
+        }
+        countercpy = new int32_t *[array_num];
+        for (int i = 0; i < array_num; i++)
+        {
+            countercpy[i] = new int32_t[entry_num];
+            for (int j = 0; j < entry_num; j++)
+                countercpy[i][j] = counter[i][j];
+        }
+        return true;
+    }
     int get_sign(int array_index, char* flow_id, int size = sizeof(uint32_t)){
         uint32_t kk = hash_sign[array_index].run(flow_id, size);
         int sign = HASH_TO_SIGN(kk);
@@ -1581,7 +1737,7 @@ public:
     }
     bool Decode(DataVariant& data) override
     {
-        uint32_t checked_id = 3393094456;
+        uint32_t checked_id = 3458834590;
         auto* mapPtr = std::get_if<std::unordered_map<int32_t, int>>(&data);
         if (!mapPtr) {
             return false;  // 如果类型不匹配，则直接返回 false
@@ -1690,6 +1846,9 @@ public:
                     else
                     {
                         result[flow_id] = abs(counter[i][j]);
+                    }
+                    if(id[i][j] == checked_id){
+                        cout << "result[" << (uint32_t)flow_id << "] = " << result[flow_id] << endl;
                     }
                     // delete flow from other rows
                     

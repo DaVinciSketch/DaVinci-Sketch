@@ -18,6 +18,12 @@ elasticradar: ./elasticradar.cpp ./src/ElasticRadar/HeavyPart.cpp
 	g++ -O2 -o ./build/elasticradar.out ./elasticradar.cpp ./src/ElasticRadar/HeavyPart.cpp $(CPPTYPE)
 elasticradar_difftest: ./elasticradar_difftest.cpp ./src/ElasticRadar/HeavyPart.cpp
 	g++ -O2 -o ./build/elasticradar_difftest.out ./elasticradar_difftest.cpp ./src/ElasticRadar/HeavyPart.cpp $(CPPTYPE)
+elasticradar_uniontest: ./elasticradar_uniontest.cpp ./src/ElasticRadar/HeavyPart.cpp
+	g++ -O2 -o ./build/elasticradar_uniontest.out ./elasticradar_uniontest.cpp ./src/ElasticRadar/HeavyPart.cpp $(CPPTYPE)
+elasticradar_innerproducttest: ./elasticradar_innerproducttest.cpp ./src/ElasticRadar/HeavyPart.cpp
+	g++ -O2 -o ./build/elasticradar_innerproducttest.out ./elasticradar_innerproducttest.cpp ./src/ElasticRadar/HeavyPart.cpp $(CPPTYPE)
+elasticradar_distribution: ./elasticradar_distribution.cpp ./src/ElasticRadar/HeavyPart.cpp
+	g++ -O2 -o ./build/elasticradar_distribution.out ./elasticradar_distribution.cpp ./src/ElasticRadar/HeavyPart.cpp $(CPPTYPE)
 fcm: ./fcm.cpp
 	g++ -O2 -o ./build/fcm.out ./fcm.cpp -lpthread
 fermat: ./fermat.cpp

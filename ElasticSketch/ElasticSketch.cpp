@@ -159,8 +159,7 @@ double ElasticSketch<bucket_num, tot_memory_in_bytes>::get_entropy()
 }
 
 template<int bucket_num, int tot_memory_in_bytes>
-void ElasticSketch<bucket_num, tot_memory_in_bytes>::get_distribution(vector<double> &dist)
-{
+void ElasticSketch<bucket_num, tot_memory_in_bytes>::get_distribution(vector<double> &dist) {
     light_part->get_distribution(dist);
 
     for(int i = 0; i < bucket_num; ++i)
