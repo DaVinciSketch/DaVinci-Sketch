@@ -1,4 +1,5 @@
 CPPTYPE = -std=c++17 
+DISTRIBUTION = ./elasticradar_distribution.cpp
 
 all: 
 	@if [ ! -d ./build ]; then mkdir -p ./build; fi; 
@@ -24,6 +25,16 @@ elasticradar_innerproducttest: ./elasticradar_innerproducttest.cpp ./src/Elastic
 	g++ -O2 -o ./build/elasticradar_innerproducttest.out ./elasticradar_innerproducttest.cpp ./src/ElasticRadar/HeavyPart.cpp $(CPPTYPE)
 elasticradar_distribution: ./elasticradar_distribution.cpp ./src/ElasticRadar/HeavyPart.cpp
 	g++ -O2 -o ./build/elasticradar_distribution.out ./elasticradar_distribution.cpp ./src/ElasticRadar/HeavyPart.cpp $(CPPTYPE)
+ER_all_tests_dist: ./ER_all_tests_dist.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticSketch/ElasticSketch.cpp ./src/ElasticSketch/LightPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp
+	g++ -O2 -o ./build/ER_all_tests_dist.out ./ER_all_tests_dist.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticSketch/ElasticSketch.cpp ./src/ElasticSketch/LightPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp $(CPPTYPE)
+ER_all_tests_diff: ./ER_all_tests_diff.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticSketch/ElasticSketch.cpp ./src/ElasticSketch/LightPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp
+	g++ -O2 -o ./build/ER_all_tests_diff.out ./ER_all_tests_diff.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticSketch/ElasticSketch.cpp ./src/ElasticSketch/LightPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp $(CPPTYPE)
+ER_all_tests_union: ./ER_all_tests_union.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticSketch/ElasticSketch.cpp ./src/ElasticSketch/LightPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp
+	g++ -O2 -o ./build/ER_all_tests_union.out ./ER_all_tests_union.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticSketch/ElasticSketch.cpp ./src/ElasticSketch/LightPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp $(CPPTYPE)
+ER_all_tests_innerp: ER_all_tests_innerp.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticSketch/ElasticSketch.cpp ./src/ElasticSketch/LightPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp
+	g++ -O2 -o ./build/ER_all_tests_innerp.out ER_all_tests_innerp.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticSketch/ElasticSketch.cpp ./src/ElasticSketch/LightPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp $(CPPTYPE)
+ER_all_tests_accuracy: ER_all_tests_accuracy.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticSketch/ElasticSketch.cpp ./src/ElasticSketch/LightPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp
+	g++ -O2 -o ./build/ER_all_tests_accuracy.out ER_all_tests_accuracy.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticSketch/ElasticSketch.cpp ./src/ElasticSketch/LightPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp $(CPPTYPE)
 fcm: ./fcm.cpp
 	g++ -O2 -o ./build/fcm.out ./fcm.cpp -lpthread
 fermat: ./fermat.cpp

@@ -6,7 +6,8 @@
 #include <unordered_map>
 #include <queue>
 #include <cstring>
-#include "util/BOBHash32.h"
+// #include "util/BOBHash32.h"
+#include "common/BOBHash32.h"
 #include "util/mod.h"
 #include "util/prime.h"
 #include "util/murmur3.h"
@@ -676,7 +677,6 @@ public:
             hash[i].initialize(_init + (10 * i) + 1);
             hash_sign[i].initialize(_init + (17 * i) + 1);
         }
-        printf("1You are getting out Fermat Count version.\n");
     }
 
     Fermat_Count(int _memory, bool _fing, uint32_t _init) : use_fing(_fing), fingerprint(nullptr), hash_fp(nullptr)
@@ -701,7 +701,6 @@ public:
             hash[i].initialize(_init + i + 1);
             hash_sign[i].initialize(_init + (17 * i) + 1);
         }
-        printf("2You are getting out Fermat Count version.\n");
     }
 
     ~Fermat_Count() override
@@ -1087,7 +1086,7 @@ public:
                         else
                         {
                             result[flow_id] = abs(counter[i][check]);
-                            if(counter[i][check] != abs(counter[i][check])) cout<<counter[i][check]<<" "<<abs(counter[i][check])<<" ";
+                            // if(counter[i][check] != abs(counter[i][check])) cout<<counter[i][check]<<" "<<abs(counter[i][check])<<" ";
                             // cout<<"I'm such an asshole!\n";
                         }
                         // delete flow from other rows
@@ -1235,7 +1234,6 @@ public:
         for (int i = 0; i < array_num; ++i)
         {
             id[i] = new uint32_t[entry_num];
-            cout << "entry_num: " << entry_num << endl;
             memset(id[i], 0, entry_num * sizeof(uint32_t));
         }
         // fingerprint
@@ -1278,7 +1276,7 @@ public:
 
     Fermat_Count_IDP_CNTPM(int _a, int _e, bool _fing, uint32_t _init) : array_num(_a), entry_num(_e), use_fing(_fing), fingerprint(nullptr), hash_fp(nullptr)
     {
-        cout << "You are running Fermat_Count_IDP_CNTPM version. Prime for ID: " << PRIME_ID << "array_num = " << array_num << endl;
+        // cout << "You are running Fermat_Count_IDP_CNTPM version. Prime for ID: " << PRIME_ID << ", array_num = " << array_num << endl;
         create_array();
         // hash
         if (use_fing)
@@ -1291,12 +1289,11 @@ public:
             hash[i].initialize(_init + (10 * i) + 1);
             hash_sign[i].initialize(_init + (17 * i) + 1);
         }
-        printf("1You are getting out Fermat Count version.\n");
     }
 
     Fermat_Count_IDP_CNTPM(int _memory, bool _fing, uint32_t _init) : use_fing(_fing), fingerprint(nullptr), hash_fp(nullptr)
     {
-        printf("You are running Fermat_Count_IDP_CNTPM version. _memory = %d\n", _memory);
+        // printf("You are running Fermat_Count_IDP_CNTPM version. _memory = %d\n", _memory);
         array_num = 3;
         if (use_fing)
             entry_num = _memory / (array_num * 12);
@@ -1316,7 +1313,6 @@ public:
             hash[i].initialize(_init + i + 1);
             hash_sign[i].initialize(_init + (17 * i) + 1);
         }
-        printf("2You are getting out Fermat Count version.\n");
     }
 
     ~Fermat_Count_IDP_CNTPM() override
@@ -1371,19 +1367,9 @@ public:
         {
             for (int i = 0; i < array_num; ++i)
             {
-                // printf("I'm in %d\n", __LINE__);
                 uint32_t pos = hash[i].run((char *)&flow_id_, sizeof(uint32_t)) % entry_num;
-                // printf("I'm in %d\n", __LINE__);
                 uint32_t kk = hash_sign[i].run((char *)&flow_id_, sizeof(uint32_t));
-                // printf("kk = %d\n", kk);
-                // printf("I'm in %d\n", __LINE__);
                 int sign = HASH_TO_SIGN(kk);
-                // printf("Before judging in %d\n", __LINE__);
-                if(flow_id == 1699205447){
-                    cout << "Inserted flow_id: " << flow_id << " ";
-                    cout << "(uint64_t)id[i][pos] = " << (uint64_t)id[i][pos] << "(uint64_t)mulMod32(flow_id_, cnt, PRIME_ID_IDP_CNTPM) = " << (uint64_t)mulMod32(flow_id_, cnt, PRIME_ID_IDP_CNTPM) << " ";
-
-                }
                 if(cnt_sign > 0){
                     id[i][pos] = ((uint64_t)id[i][pos] + (uint64_t)mulMod32(flow_id_, abscnt, PRIME_ID_IDP_CNTPM)) % (uint64_t)PRIME_ID_IDP_CNTPM;
                 }
@@ -1400,9 +1386,6 @@ public:
                     // id[i][pos] = ((int64_t)id[i][pos] - (int64_t)mulMod32_Cnt(flow_id_, cnt, PRIME_ID_COUNT)) % (int64_t)PRIME_ID_COUNT;
                     // cout << "(After module)id[" << i << "][" << pos << "]=" << (int64_t)id[i][pos] << " ";
                     counter[i][pos] -= cnt;
-                }
-                if(flow_id == 3948909411){
-                    cout << "i = " << i << " pos = " << pos << " counter = " << counter[i][pos] << " id = " << id[i][pos] << " flow_id = " << flow_id << " cnt = " << cnt << " sign = " << sign << " PRIME = " << PRIME_ID_IDP_CNTPM << endl;
                 }
             }
         }
@@ -1625,9 +1608,6 @@ public:
             uint32_t kk = hash_sign[i].run((char *)&flow_id, sizeof(uint32_t));
             int sign = HASH_TO_SIGN(kk);
             values.push_back(countercpy[i][pos]*sign);
-            if(countercpy[i][pos]*sign < 0){
-                cout << "countercpy[" << i << "][" << pos << "] = " << countercpy[i][pos] << " sign = " << sign << ", key = " << flow_id << endl;
-            }
             values_from_changed_counters.push_back(counter[i][pos]*sign);
             // cout << counter[i][pos]*sign << " ";
         }
@@ -1780,9 +1760,7 @@ public:
         queue<int> *candidate = new queue<int>[array_num];
         int32_t flow_id = 0;
         int32_t fing = 0;
-        // cout << endl << endl << endl << endl << endl << endl << endl << endl << endl;
         // first round
-        cout << "array_num is " << array_num << " entry_num is " << entry_num << endl;
         // std::ofstream outFile("decode_map_track.csv");
         // outFile << "array,entry,mapto,rootcol" << endl;
         for (int i = 0; i < array_num; ++i){
@@ -1897,15 +1875,6 @@ public:
             }
         }
         // outFile.close();
-        cout << endl << endl << endl;
-        for(int i=0;i<array_num;i++){
-            cout << "candidate[" << i << "].size() = " << candidate[i].size() << endl;
-            for(int j=0;j<candidate[i].size();j++){
-                if(id[i][j] == 3391805306){
-                    cout << "3391805306 is in candidate[" << i << "]" << endl;
-                }
-            }
-        }
 
         bool pause;
         int acc = 0;
@@ -1915,8 +1884,6 @@ public:
             pause = true;
             for (int i = 0; i < array_num; ++i)
             {
-                // uint32_t kk = hash_sign[i].run((char *)&flow_id, sizeof(uint32_t));
-                // int sign = HASH_TO_SIGN(kk);
                 int sign = get_sign(i, (char *)&flow_id, sizeof(uint32_t));
                 if (!candidate[i].empty())
                     pause = false;
@@ -1926,7 +1893,6 @@ public:
                     candidate[i].pop();
                     uint32_t temp_flow_id = 0;
                     uint32_t temp_fin = 0;
-                    // cout << i << " " << check << endl;
                     if (counter[i][check] == 0)
                     {
                         continue;
@@ -1979,7 +1945,7 @@ public:
                         else
                         {
                             result[flow_id] = sign * counter[i][check];
-                            if(counter[i][check] != abs(counter[i][check])) cout<<counter[i][check]<<" "<<abs(counter[i][check])<<" ";
+                            // if(counter[i][check] != abs(counter[i][check])) cout<<counter[i][check]<<" "<<abs(counter[i][check])<<" ";
                             
                         }
                         // delete flow from other rows

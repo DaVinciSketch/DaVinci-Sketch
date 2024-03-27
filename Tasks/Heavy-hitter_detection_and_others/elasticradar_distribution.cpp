@@ -17,7 +17,6 @@ int main()
     bool _fing = false;
 
     FLCSketch<bucket_num> *sketch;
-    FLCSketch<bucket_num> *flcsketch = NULL;
 
     double aveare = 0.0, aveaae = 0.0, ave_HH = 0.0, ave_HC = 0.0, ave_card_RE = 0.0;
     double ave_HH_are = 0.0;
@@ -90,38 +89,6 @@ int main()
         cout << index << "th array ARE: " << are / minnum << endl;
     }
 
-
-    //calculate ARE
-
-
-    
-
-
-
-
-    
-
-    // FLCSketch<bucket_num> sketch_result = Union<bucket_num>(*sketches[0], *sketches[1], init_seed);
-    // long double calculated_innerproduct = InnerProduct<bucket_num>(*sketches[0], *sketches[1]);
-
-    //Real inner product
-    // long double real_innerproduct = 0;
-    // for (auto it = true_freqs[0].begin(); it != true_freqs[0].end(); ++it)
-    // {
-    //     real_innerproduct += (long double)it->second * (long double)true_freqs[1][it->first];
-    // }
-    // printf("Real inner product: %Lf\n", real_innerproduct);
-    // printf("Calculated inner product: %Lf\n", calculated_innerproduct);
-    // printf("Error rate: %Lf\n", (real_innerproduct - calculated_innerproduct) / real_innerproduct);
-
-    // sketches[0]->write2file("innerp_sketch1.txt");
-    // sketches[1]->write2file("innerp_sketch2.txt");
-    
-    /*-*-*-* End of packet insertion *-*-*-*/
-
-
-    // delete sketches[0];
-    // delete sketches[1];
     delete sketch;
 
 }

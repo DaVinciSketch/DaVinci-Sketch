@@ -19,6 +19,33 @@
 #define BUCKET_NUM_ (HEAVY_MEM_ / 64)
 
 using namespace std;
+
+void cardPrintSketchInfo(int _heavypartBucketNum, int array_num, int entry_num, int _fermatcount, int usefing, int _init) {
+    const int width = 55;
+    const std::string line(width, '-');
+    const std::string space(width , ' ');
+
+    std::cout << "╭" << line << "╮" << std::endl;
+    std::cout << "│" << space << "│" << std::endl;
+    
+    std::string title = "Fermat_Count_IDP_CNTPM version";
+    int titleLength = title.length();
+    int titlePadding = (width - titleLength) / 2;
+    std::cout << "│" << std::string(titlePadding, ' ') << title << std::string(width - titlePadding - titleLength, ' ') << "│" << std::endl;
+    
+    std::cout << "│" << space << "│" << std::endl;
+    std::cout << "│   Parameters:" << std::string(width - 14, ' ') << "│" << std::endl;
+    
+    std::printf("│     _heavypartBucketNum = %-7d%*s│\n", _heavypartBucketNum, width - 34, "");
+    std::printf("│     array_num           = %-7d%*s│\n", array_num, width - 34, "");
+    std::printf("│     entry_num           = %-7d%*s│\n", entry_num, width - 34, "");
+    std::printf("│     _fermatcount        = %-7d%*s│\n", _fermatcount, width - 34, "");
+    std::printf("│     usefing             = %-7d%*s│\n", usefing, width - 34, "");
+    std::printf("│     _init               = %-7d%*s│\n", _init, width - 34, "");
+    
+    std::cout << "│" << space << "│" << std::endl;
+    std::cout << "╰" << line << "╯" << std::endl;
+}
 template<int _bucket_num>
 class FLCSketch
 {
@@ -53,10 +80,9 @@ public:
     FLCSketch(int _heavypartBucketNum, int _fermatEleMem, int _fermatcount = 2, 
                  bool usefing = USE_FING, uint32_t _init = INIT) : fermatEleMem(_fermatEleMem)
     {
+        printf("You are running Fermat_Count_IDP_CNTPM version. ");
         printf("parameters: _heavypartBucketNum = %d, _fermatEleMem = %d, _fermatcount = %d, usefing = %d, _init = %d\n", _heavypartBucketNum, _fermatEleMem, _fermatcount, usefing, _init);
         heavy_bucket_num = _heavypartBucketNum;
-        // light_array_num = array_num;
-        // light_entry_num = entry_num;
         tot_packets = 0;
         // fermatEle = new Fermat(fermatEleMem, usefing, _init);
         if(_fermatcount == 1){
@@ -76,30 +102,26 @@ public:
     FLCSketch(int _heavypartBucketNum, int array_num, int entry_num, int _fermatcount = 2, 
                  bool usefing = USE_FING, uint32_t _init = INIT)
     {
-        printf("parameters: _heavypartBucketNum = %d, array_num = %d, entry_num = %d, _fermatcount = %d, usefing = %d, _init = %d\n", _heavypartBucketNum, array_num, entry_num, _fermatcount, usefing, _init);
+        printf("You are running Fermat_Count_IDP_CNTPM version. ");
+        printf("Parameters: _heavypartBucketNum = %d, array_num = %d, entry_num = %d, _fermatcount = %d, usefing = %d, _init = %d\n", _heavypartBucketNum, array_num, entry_num, _fermatcount, usefing, _init);
+        cardPrintSketchInfo(_heavypartBucketNum, array_num, entry_num, _fermatcount, usefing, _init);
         heavy_bucket_num = _heavypartBucketNum;
         light_array_num = array_num;
         light_entry_num = entry_num;
 
         ifFermatCount =  _fermatcount;
         tot_packets = 0;
-        // fermatEle = new Fermat(array_num, entry_num, usefing, _init);
         if(_fermatcount == 1){
             fermatEle = new Fermat_Count(array_num, entry_num, usefing, _init);
         }
         else if(_fermatcount == 2){
-            cout << "Running Fermat_Count_IDP_CNTPM, fermatEleMem = " << fermatEleMem << endl;
             fermatEle = new Fermat_Count_IDP_CNTPM(array_num, entry_num, usefing, _init);
         }
         else{
             fermatEle = new Fermat_Sketch(array_num, entry_num, usefing, _init);
         }
-        // fermatEle = new Fermat_Count_IDP_CNTPM(fermatEleMem, usefing, _init);
-        // heavy_part = new HeavyPart<bucket_num>(bucket_num);
         heavy_part = new HeavyPart<bucket_num>(_heavypartBucketNum);
         
-        em_fsd_algos = new EMFSD[light_array_num];
-
     }
     void insert(const char *key, int f = 1)
     {
@@ -158,6 +180,7 @@ public:
     }
 
     void get_distribution(vector<double> &dist, int index = 0) {
+        em_fsd_algos = new EMFSD[light_array_num];
         int32_t **counters;
         fermatEle->cpy_counters_to_pos(&counters);
         
@@ -194,6 +217,9 @@ public:
                     dist[val]++;
                 }
             }
+        
+        delete[] em_fsd_algos;
+        delete[] counters;
     }
     // int get_cardinality()
     // {
@@ -208,84 +234,59 @@ public:
         cout << "Size of insertedflow is " << fermatEle->insertedflows.size() << endl;
         DataVariant variantEleresult = Eleresult;
 
-        printf("Gonna decode %p\n", fermatEle);
         // 将 variantEleresult 传递给 Decode 函数
         if (fermatEle->Decode(variantEleresult)) 
             printf("Decode Successfully!\n");
         else
             printf("Decode Fail!\n");
         Eleresult = std::get<std::unordered_map<int, int>>(variantEleresult);
-        bool flag_some_is_zero = 0;
-        for(auto i : Eleresult){
-            if(i.second == 0){
-                printf("Key: %u, Value: %d\n", i.first, i.second);
-                flag_some_is_zero = 1;
-            }
-        }
-        if(flag_some_is_zero){
-            printf("Some keys are zero!\n");
-        }
-        else{
-            printf("All keys are non-zero!\n");
-        }
+        // bool flag_some_is_zero = 0;
+        // for(auto i : Eleresult){
+        //     if(i.second == 0){
+        //         printf("Key: %u, Value: %d\n", i.first, i.second);
+        //         flag_some_is_zero = 1;
+        //     }
+        // }
+        // if(flag_some_is_zero){
+        //     printf("Some keys are zero!\n");
+        // }
+        // else{
+        //     printf("All keys are non-zero!\n");
+        // }
         printf("Eleresult: %lu\n", Eleresult.size());
         printf("Lightpart-inserted num: %lu\n", fermatEle->insertedflows.size());
         printf("Decoded rate: %f\n", (double)Eleresult.size() / fermatEle->insertedflows.size());
         
         printf("-----------------------------------------------------------------------------\n");
-
-        //update decode_track with heavypart and lightpart
-
         return Eleresult.size();
-
-            // 遍历并打印 Eleresult 中的每个元素
-        // printf("Begin printing...\n");
-        // for (const auto &item : Eleresult)
-        // {
-        //     // 将 key 转换为 uint32_t 并打印
-        //     uint32_t key = item.first;
-        //     printf("Key: %.8x, Value: %d\n", key, item.second);
-        // }
     }
     uint32_t query(const char *key, bool add_undecoded = 1, bool ifprint = 0)
     {
-        // add_undecoded = 0;
         uint32_t hp_cnt = heavy_part->query((uint8_t *)key);
-        // uint32_t heavy_result = heavy_part.query(key);
         uint32_t id = *(uint32_t*) key;
-        uint32_t checked_id = 3439783959;
+        uint32_t checked_id = 0;
 
         if(hp_cnt == 0 || HIGHEST_BIT_IS_1(hp_cnt))
         // if(1)
         {
-            if(id == checked_id){
-                cout << "Enter the if statement" << endl;
-            }
             if (Eleresult.count(*(uint32_t *)key))
             {
-                // return hp_cnt + Eleresult[*(uint32_t *)key];
-            // int light_result = light_part.query(key);
-                // printf("Don't need CM! %d\n", (int)GetCounterVal(hp_cnt) + Eleresult[*(uint32_t *)key]);
                 decode_track[*(uint32_t *)key] = vector<int>{(int)GetCounterVal(hp_cnt), Eleresult[*(uint32_t *)key], 0};
                 return (int)GetCounterVal(hp_cnt) + Eleresult[*(uint32_t *)key];
 
             }
             else if(add_undecoded){
                 int cm_query = fermatEle->undecoded_query(key);
-                // printf("Count Min Result: %d\n", cm_query);
-                // return (int)GetCounterVal(hp_cnt)
-                if(id == checked_id){
+                if(checked_id && id == checked_id){
                     if(fermatEle->insertedflows.find(id) != fermatEle->insertedflows.end()){
                         cout << checked_id << " exists in insertedflows!" << endl;
                     }
                     else{
-                        cout << checked_id << "3510838475 does not exist in insertedflows!" << endl;
+                        cout << checked_id << " does not exist in insertedflows!" << endl;
                     }
                 }
                 decode_track[*(uint32_t *)key] = vector<int>{(int)GetCounterVal(hp_cnt), 0, cm_query};
                 return (int)GetCounterVal(hp_cnt) + cm_query;
-                // printf("Add Count Min Result: %d\n", cm_query);
-                // fermatEle->counter[][];
             }
         }
         if(id == checked_id){
@@ -319,9 +320,6 @@ public:
         uint32_t checked_id = 3439783959;
 
         if(hp_cnt == 0 || HIGHEST_BIT_IS_1(hp_cnt)){
-            if(id == checked_id){
-                cout << "Enter the if statement" << endl;
-            }
             if (Eleresult.count(*(uint32_t *)key))
             {
                 decode_track[*(uint32_t *)key] = vector<int>{(int)GetCounterVal(hp_cnt), Eleresult[*(uint32_t *)key], 0};
@@ -442,6 +440,12 @@ public:
         fclose(fp2);
         return true;
     }
+
+    ~FLCSketch()
+    {
+        delete heavy_part;
+        delete fermatEle;
+    }
 };
 
 template<int bucket_num>
@@ -507,7 +511,7 @@ struct Bucket
 };
 */
 template<int bucket_num>
-FLCSketch<bucket_num> Union(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2, uint32_t init_seed = 37)
+void Union(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2, FLCSketch<bucket_num>& sketch3, uint32_t init_seed = 37)
 {
     //Check whether the two sketches are the same in size
     if(!check_sketches_same_size(sketch1, sketch2)){
@@ -518,7 +522,7 @@ FLCSketch<bucket_num> Union(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num
     int array_num = sketch1.get_light_array_num();
     int entry_num = sketch1.get_light_entry_num();
     // FLCSketch<bucket_num> sketch3(heavy_bucket_num, array_num, entry_num, sketch1.ifFermatCount);
-    FLCSketch<bucket_num> sketch3(heavy_bucket_num, array_num, entry_num, 2, 0, init_seed);
+    // FLCSketch<bucket_num> sketch3(heavy_bucket_num, array_num, entry_num, 2, 0, init_seed);
     //Heavy part
     alignas(64) Bucket* sketch1_buckets = sketch1.heavy_part->buckets;
     alignas(64) Bucket* sketch2_buckets = sketch2.heavy_part->buckets;
@@ -642,13 +646,12 @@ FLCSketch<bucket_num> Union(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num
         uint32_t val = kickout_vals[i];
         sketch3.fermatEle->Insert(key, val);
     }
-    return sketch3;
-
+    // return sketch3;
     //get total num of keys in different buckets
 }
 
 template<int bucket_num>
-FLCSketch<bucket_num> Difference(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2, uint32_t init_seed = 37)
+void Difference(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2, FLCSketch<bucket_num> &sketch3, uint32_t init_seed = 37)
 {
     // Check whether the two sketches are the same in size
     if (!check_sketches_same_size(sketch1, sketch2))
@@ -661,7 +664,7 @@ FLCSketch<bucket_num> Difference(FLCSketch<bucket_num> &sketch1, FLCSketch<bucke
     int array_num = sketch1.get_light_array_num();
     int entry_num = sketch1.get_light_entry_num();
 
-    FLCSketch<bucket_num> sketch3(heavy_bucket_num, array_num, entry_num, 2, 0, init_seed);
+    // FLCSketch<bucket_num> sketch3(heavy_bucket_num, array_num, entry_num, 2, 0, init_seed);
     printf("info about sketch3: heavy_bucket_num = %d, array_num = %d, entry_num = %d, fermatkind = %d\n", sketch3.get_heavy_bucket_num(), sketch3.get_light_array_num(), sketch3.get_light_entry_num(), sketch3.ifFermatCount);
 
     // Heavy part
@@ -805,7 +808,7 @@ FLCSketch<bucket_num> Difference(FLCSketch<bucket_num> &sketch1, FLCSketch<bucke
     cout << "Size of insertedflows in sketch1 is " << sketch1.fermatEle->insertedflows.size() << endl;
     cout << "Size of insertedflows in sketch2 is " << sketch2.fermatEle->insertedflows.size() << endl;
     cout << "Size of insertedflows in sketch3 is " << sketch3.fermatEle->insertedflows.size() << endl;
-    return sketch3;
+    // return sketch3;
 }
 
 template<int bucket_num>

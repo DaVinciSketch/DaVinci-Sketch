@@ -62,8 +62,7 @@ int main()
     sketches[0]->write2file("sketch1.txt");
     sketches[1]->write2file("sketch2.txt");
     sketch_result.write2file("sketch_result.txt");
-    printf("flcsketch(&sketch_result)->fermatEle address: %p\n", flcsketch->fermatEle);
-    printf("sketches[0]->fermatEle address: %p\n", sketches[0]->fermatEle);
+    
     flcsketch->decode();
 
     //Real result of difference

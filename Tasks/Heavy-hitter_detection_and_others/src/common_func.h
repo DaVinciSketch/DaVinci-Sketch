@@ -44,12 +44,51 @@ typedef vector<SRCIP_TUPLE> TRACE;
 
 TRACE traces[NUM_TRACE];
 
+uint32_t ReadNTraces(int n)
+{
+    if (n < 0 || n > 10) {
+        printf("[ERROR] Invalid value of n. It should be between 0 and 10.\n");
+        return 0;
+    }
+
+    uint32_t total_pck_num = 0;
+    char tmp[13] = {0};
+
+    for (int i = 0; i <= n; i++) {
+        string filename = "/home/FLC/ElasticSketchCode/data/" + to_string(i) + ".dat";
+        FILE *file = fopen(filename.c_str(), "r");
+        if (file == NULL) {
+            printf("[ERROR] File %s not open\n", filename.c_str());
+            continue;
+        }
+
+        SRCIP_TUPLE key;
+        int window = 0;
+
+        if (!fread(tmp, 13, 1, file)) {
+            printf("[ERROR] File %s error!\n", filename.c_str());
+            fclose(file);
+            continue;
+        }
+
+        while (fread(tmp, 13, 1, file)) {
+            memcpy(&key, tmp, 4);
+            traces[window].push_back(key);
+            total_pck_num++;
+        }
+
+        fclose(file);
+        printf("[INFO] File %s scanned, packets number: %ld\n", filename.c_str(), traces[window].size());
+    }
+
+    printf("[INFO] Total packets number: %u\n", total_pck_num);
+    return total_pck_num;
+}
+
 uint32_t myReadTraces()
 {
-  double starttime, nowtime;
   uint32_t total_pck_num = 0;
   string filename130000 = "/home/FLC/ElasticSketchCode/data/0.dat";
-  // string filename130000 = "../data/130000.dat";
   char tmp[13] = {0};
   FILE *file1 = fopen(filename130000.c_str(), "r");
   if (file1 == NULL)
@@ -63,24 +102,16 @@ uint32_t myReadTraces()
     printf("[ERROR] file error!\n");
     exit(0);
   }
-  starttime = *(double *)(tmp + 13);
   while (fread(tmp, 13, 1, file1))
   {
-    // nowtime = *(double *)(tmp + 13);
-    // if (nowtime - starttime >= 5.0)
-    // {
-    //   window++;
-    //   starttime = nowtime;
-    // }
     memcpy(&key, tmp, 4);
     traces[window].push_back(key);
     total_pck_num++;
   }
   printf("[INFO] Scanned, packets number:\n");
-  // for (int i = 0; i < 12; i++)
+  fclose(file1);
   int i = 0;
   printf("[INFO] window %02d has %ld packets\n", i, traces[i].size());
-  // printf("\n\n");
   return total_pck_num;
 }
 

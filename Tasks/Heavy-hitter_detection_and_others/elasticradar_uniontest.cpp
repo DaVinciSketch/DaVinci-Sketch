@@ -9,7 +9,8 @@ int main()
 {
     printf("Start accuracy measurement of tower_fermat: TOTAL_MEMORY %dKB, FERMAT_BUCKET %d\n", TOT_MEM, ELE_BUCKET);
     // uint32_t totnum_packet = ReadTraces();
-    uint32_t totnum_packet = myReadTraces();
+    // uint32_t totnum_packet = myReadTraces();
+    uint32_t totnum_packet = ReadNTraces(10);
 
     int array_num = 3;
     int entry_num = (TOT_MEM_IN_BYTES - HEAVY_MEM)*10;
@@ -62,8 +63,6 @@ int main()
     sketches[0]->write2file("union_sketch1.txt");
     sketches[1]->write2file("union_sketch2.txt");
     sketch_result.write2file("union_sketch_result.txt");
-    printf("flcsketch(&sketch_result)->fermatEle address: %p\n", flcsketch->fermatEle);
-    printf("sketches[0]->fermatEle address: %p\n", sketches[0]->fermatEle);
     flcsketch->decode();
 
     //Real result of difference
@@ -87,36 +86,6 @@ int main()
         }
     }
 
-    //output 2
-    
-    // std::ofstream outFile("output.csv");
-
-    // // 首先处理只存在于一个字典中的键
-    // for (const auto& elem : flcsketch->Eleresult) {
-    //     if (flcsketch->fermatEle->insertedflows.find(elem.first) == flcsketch->fermatEle->insertedflows.end()) {
-    //         // 如果键仅存在于 Eleresult 中
-    //         outFile << elem.first << "," << elem.second << ",\n";
-    //     }
-    // }
-
-    // for (const auto& elem : flcsketch->fermatEle->insertedflows) {
-    //     if (flcsketch->Eleresult.find(elem.first) == flcsketch->Eleresult.end()) {
-    //         // 如果键仅存在于 EleFermatInserted 中
-    //         outFile << elem.first << ",," << elem.second << "\n";
-    //     }
-    // }
-
-    // // 然后处理两个字典中都有的键
-    // for (const auto& elem : flcsketch->Eleresult) {
-    //     auto it = flcsketch->fermatEle->insertedflows.find(elem.first);
-    //     if (it != flcsketch->fermatEle->insertedflows.end()) {
-    //         // 如果键同时存在于两个字典中
-    //         outFile << elem.first << "," << elem.second << "," << it->second << "\n";
-    //     }
-    // }
-    // outFile.close();
-    //
-    // printf("[INFO] End of insertion process...Num.flow:%d\n", (int)true_freq.size());
     sketches[0]->decode();
     sketches[1]->decode();
 
@@ -133,8 +102,6 @@ int main()
         count++;
     }
     double averageARE = totalARE / count;
-    printf("totalARE: %f, count: %d\n", totalARE, count);
-    printf("Average ARE: %f\n", averageARE);
     
     std::ofstream outFile2("./outputs/union_result_compare.csv");
     outFile2 << "flowid,sketch0real,sketch1real,sketch0decode,sketch1decode,real_result,flcsketch_result\n";
@@ -156,6 +123,8 @@ int main()
     outFile2.close();
     flcsketch->write2file("sketch_result_afterdecoding.txt");
     
+    printf("totalARE: %f, count: %d\n", totalARE, count);
+    printf("Average ARE: %f\n", averageARE);
     /*-*-*-* End of packet insertion *-*-*-*/
 
 
