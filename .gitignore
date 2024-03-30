@@ -4,3 +4,15 @@
 *.dat
 garbagebin
 .vscode
+
+ERSketch.h
+ERSketch_Count.h
+ERtest.cpp
+ElasticSketch/
+Fermat/
+common/
+data/
+datasample/
+elastic.cpp
+outputs
+Tasks/Heavy-hitter_detection_and_others/outputs/*.txt

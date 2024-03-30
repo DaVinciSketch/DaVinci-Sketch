@@ -914,7 +914,7 @@ public:
     //     return (int)ret;
     // }
 
-    int undecoded_query(const char *key) override
+    int undecoded_query(const char *key) override // Must be used after decode() is used.
     {
         // printf("Calculating Medium!\n");
         uint32_t flow_id = *(uint32_t *)key;

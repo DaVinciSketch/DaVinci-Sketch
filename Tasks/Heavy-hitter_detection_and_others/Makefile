@@ -17,14 +17,14 @@ elasticp4: ./elasticp4.cpp
 	g++ -O2 -o ./build/elasticp4.out ./elasticp4.cpp 
 elasticradar: ./elasticradar.cpp ./src/ElasticRadar/HeavyPart.cpp
 	g++ -O2 -o ./build/elasticradar.out ./elasticradar.cpp ./src/ElasticRadar/HeavyPart.cpp $(CPPTYPE)
-elasticradar_difftest: ./elasticradar_difftest.cpp ./src/ElasticRadar/HeavyPart.cpp
-	g++ -O2 -o ./build/elasticradar_difftest.out ./elasticradar_difftest.cpp ./src/ElasticRadar/HeavyPart.cpp $(CPPTYPE)
-elasticradar_uniontest: ./elasticradar_uniontest.cpp ./src/ElasticRadar/HeavyPart.cpp
+elasticradar_difftest: ./elasticradar_difftest.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp
+	g++ -O2 -o ./build/elasticradar_difftest.out ./elasticradar_difftest.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp $(CPPTYPE)
+elasticradar_uniontest: ./elasticradar_uniontest.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp
 	g++ -O2 -o ./build/elasticradar_uniontest.out ./elasticradar_uniontest.cpp ./src/ElasticRadar/HeavyPart.cpp $(CPPTYPE)
-elasticradar_innerproducttest: ./elasticradar_innerproducttest.cpp ./src/ElasticRadar/HeavyPart.cpp
-	g++ -O2 -o ./build/elasticradar_innerproducttest.out ./elasticradar_innerproducttest.cpp ./src/ElasticRadar/HeavyPart.cpp $(CPPTYPE)
-elasticradar_distribution: ./elasticradar_distribution.cpp ./src/ElasticRadar/HeavyPart.cpp
-	g++ -O2 -o ./build/elasticradar_distribution.out ./elasticradar_distribution.cpp ./src/ElasticRadar/HeavyPart.cpp $(CPPTYPE)
+elasticradar_innerproducttest: ./elasticradar_innerproducttest.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp
+	g++ -O2 -o ./build/elasticradar_innerproducttest.out ./elasticradar_innerproducttest.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp $(CPPTYPE)
+elasticradar_distribution: ./elasticradar_distribution.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp
+	g++ -O2 -o ./build/elasticradar_distribution.out ./elasticradar_distribution.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp $(CPPTYPE)
 ER_all_tests_dist: ./ER_all_tests_dist.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticSketch/ElasticSketch.cpp ./src/ElasticSketch/LightPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp
 	g++ -O2 -o ./build/ER_all_tests_dist.out ./ER_all_tests_dist.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticSketch/ElasticSketch.cpp ./src/ElasticSketch/LightPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp $(CPPTYPE)
 ER_all_tests_diff: ./ER_all_tests_diff.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticSketch/ElasticSketch.cpp ./src/ElasticSketch/LightPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp

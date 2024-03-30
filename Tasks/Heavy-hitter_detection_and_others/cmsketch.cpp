@@ -11,7 +11,7 @@ using namespace std;
 int main()
 {
     printf("Start accuracy measurement of CMSketch\n");
-    uint32_t totnum_packet = ReadTraces();
+    uint32_t totnum_packet = myReadTraces();
 
     CMSketch *cm = NULL;
     double aveare = 0.0, aveaae = 0.0;
@@ -48,7 +48,11 @@ int main()
                     true_dist.resize(it->second + 1, 0);
                 true_dist[it->second] += 1;
                 uint32_t est_val = cm->query(key);
+                // cout << "key: " << it->first << " est_val: " << est_val << " true_val: " << it->second << endl;
                 int dist = std::abs((int)it->second - (int)est_val);
+                // if(it->second == 0){
+                //     std::cout << "key: " << it->first << " est_val: " << est_val << std::endl;
+                // }
                 ARE += dist * 1.0 / (it->second);
                 AAE += dist * 1.0;
                 if (it->second > HH_THRESHOLD)
