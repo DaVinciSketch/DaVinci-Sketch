@@ -9,7 +9,6 @@
 #define USE_FING 0
 #define INIT ((uint32_t)random() % 800)
 #define FERMAT_EM_ITER 15
-// #include "./common_func.h"
 
 #include "fermat.h"
 #include "HeavyPart.h"
@@ -57,10 +56,8 @@ public:
     int fermatEleMem;
     int towerfilterMem;
     bool ifFermatCount;
-    // TowerSketch *towerfilter;
     EMFSD *em_fsd_algos = NULL;
 
-    // int bucket_num;
     int heavy_mem = _bucket_num * COUNTER_PER_BUCKET * 8; //this is fake, only to satisfy "template" but not really used
     int heavy_bucket_num; // This is real
 
@@ -157,9 +154,6 @@ public:
             {
                 case 0: break;
                 case 1: {
-                    if(*(int32_t*)swap_key == 3444890234){
-                        cout << "Got ya bitch! swap_key = " << *(int32_t*)swap_key << ", swap_val = " << GetCounterVal(swap_val) << endl;
-                    }
                     fermatEle->Insert(*(int32_t*) swap_key, GetCounterVal(swap_val)); 
                     break;
                     }
@@ -170,8 +164,6 @@ public:
             }
         }
 
-        // printf("After Insert in ERSketch switch\n");
-
         tot_packets++;
     }
 
@@ -179,17 +171,12 @@ public:
         em_fsd_algos = new EMFSD[light_array_num];
         int32_t **counters;
         fermatEle->cpy_counters_to_pos(&counters);
-        
-        // EMFSD **em_fsd_algo = NULL;
-        
-        // for(int i=0; i<light_array_num; i++) {
+
         em_fsd_algos[index].set_counters(light_entry_num, (uint32_t*)counters[index]);
         int times = 10;
         while(times--) {
             em_fsd_algos[index].next_epoch();
         }
-        // }
-
 
         dist = em_fsd_algos[index].ns;
         
@@ -200,8 +187,6 @@ public:
                 int val = heavy_part->buckets[i].val[j];
 
                 int ex_val = fermatEle->query_array((char*)key, index); //TODO:
-                // cout << "ex_val = " << ex_val << endl;
-
                 if(HIGHEST_BIT_IS_1(val) && ex_val != 0) {
                     val += ex_val;
                     dist[ex_val]--;
@@ -217,12 +202,6 @@ public:
         delete[] em_fsd_algos;
         delete[] counters;
     }
-    // int get_cardinality()
-    // {
-    //     int used = 0, total = 0;
-    //     return towerfilter->get_cardinality();
-    // }
-
     int decode()
     {
         // printf("Decoding...... Eleresult.size() = %d\n", Eleresult.size());
@@ -310,7 +289,6 @@ public:
 
     uint32_t query_only_light_part(const char *key, bool add_undecoded = 1)
     {
-        // cout << "Querying only light part!key = " << *(uint32_t *)key << endl;
         uint32_t hp_cnt = heavy_part->query((uint8_t *)key);
         uint32_t id = *(uint32_t*) key;
         uint32_t checked_id = 3439783959;
@@ -353,7 +331,6 @@ public:
             tot += i * (int)distribution[i];
             entr += i * distribution[i] * log2(i);
         }
-        //tot = tot_packets;
         entropy = -entr / tot + log2(tot);
         return entropy;
     }
@@ -397,12 +374,9 @@ public:
     }
 
     bool write2file(char* filename){
-        //rename to filename + "heavy"
-        // FILE *fp = fopen(filename, "w");
         string heavyFilename = "./outputs/heavy_" + string(filename);
         string lightFilename = "./outputs/light_" + string(filename);
         FILE *fp = fopen(heavyFilename.c_str(), "w");
-        // std::ofstream outFile2(heavyFilename.c_str());
         if(fp == NULL){
             printf("Open file failed!\n");
             return false;
@@ -499,13 +473,6 @@ bool check_sketches_same_size(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_n
     return true;
 }
 
-/*
-struct Bucket
-{
-	uint32_t key[COUNTER_PER_BUCKET];
-	uint32_t val[COUNTER_PER_BUCKET];
-};
-*/
 template<int bucket_num>
 void Union(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2, FLCSketch<bucket_num>& sketch3, uint32_t init_seed = 37)
 {
@@ -517,8 +484,6 @@ void Union(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2, FLCSk
     int heavy_bucket_num = sketch1.get_heavy_bucket_num();
     int array_num = sketch1.get_light_array_num();
     int entry_num = sketch1.get_light_entry_num();
-    // FLCSketch<bucket_num> sketch3(heavy_bucket_num, array_num, entry_num, sketch1.ifFermatCount);
-    // FLCSketch<bucket_num> sketch3(heavy_bucket_num, array_num, entry_num, 2, 0, init_seed);
     //Heavy part
     alignas(64) Bucket* sketch1_buckets = sketch1.heavy_part->buckets;
     alignas(64) Bucket* sketch2_buckets = sketch2.heavy_part->buckets;
@@ -608,19 +573,8 @@ void Union(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2, FLCSk
         }
             
     }
-    
-    //light part
-    // uint32_t **light_id1 = sketch1.fermatEle->id;
-    // uint32_t **light_id2 = sketch2.fermatEle->id;
-    // uint32_t **light_id3 = sketch3.fermatEle->id;
-    // uint32_t **light_cnt1 = sketch1.fermatEle->counter;
-    // uint32_t **light_cnt2 = sketch2.fermatEle->counter;
-    // uint32_t **light_cnt3 = sketch3.fermatEle->counter;
-
     for(int i = 0; i < array_num; ++i){
         for(int j = 0; j < entry_num; ++j){
-            // light_id3[i][j] = (PRIME_ID_IDP_CNTPM + (uint64_t)light_id1[i][j] + (uint64_t)light_id2[i][j]) % PRIME_ID_IDP_CNTPM;
-            // light_cnt3[i][j] = light_cnt1[i][j]+ light_cnt2[i][j];
             uint32_t sketch3_id = ((uint64_t)(uint32_t)(sketch1.fermatEle->get_id(i,j)) + (uint64_t)(uint32_t)(sketch2.fermatEle->get_id(i,j))) % (uint64_t)PRIME_ID_IDP_CNTPM;
             int32_t sketch3_counter = sketch1.fermatEle->get_counter(i,j) + sketch2.fermatEle->get_counter(i,j);
             sketch3.fermatEle->set_id(i, j, sketch3_id);
@@ -642,7 +596,6 @@ void Union(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2, FLCSk
         uint32_t val = kickout_vals[i];
         sketch3.fermatEle->Insert(key, val);
     }
-    // return sketch3;
     //get total num of keys in different buckets
 }
 
@@ -730,7 +683,6 @@ void Difference(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2, 
                 if(merged_keys_vals[key] > val){
                     merged_keys_vals[key] -= val;
                 }
-                // else if(key_sign_map.count(key)>0 && key_sign_map[key]==0){
                 else if(key_sign_map[key] == -1){
                     merged_keys_vals.erase(key);
                 }
@@ -834,9 +786,6 @@ long double InnerProduct(FLCSketch<bucket_num>& sketch1, FLCSketch<bucket_num>& 
             re += res[i];
         innerProduct_light = 1.0 * re / array_num;
     }
-    // innerProduct += innerProduct_light;
-
-    // cout << "Total inner product is " << innerProduct << endl;
     sketch1.decode();
     sketch2.decode();
     if(!enable_fast){
@@ -859,48 +808,36 @@ long double InnerProduct(FLCSketch<bucket_num>& sketch1, FLCSketch<bucket_num>& 
         map<uint32_t, uint32_t> merged_keys_vals_1;
         map<uint32_t, uint32_t> merged_keys_vals_2;
         for(int j = 0; j < MAX_VALID_COUNTER; ++j){
-            // cout << "Operating bucket " << i << ", counter " << j << endl;
             uint32_t key = sketch1.heavy_part->buckets[i].key[j];
-            // cout << "Key is " << key << endl;
             uint32_t originalVal = sketch1.heavy_part->buckets[i].val[j];
-            // cout << "Original value is " << originalVal << endl;
             uint32_t val = GetCounterVal(originalVal);
-            // cout << "Value is " << val << endl;
             if(key != 0){
-                // cout << "Key " << key << endl;
                 if(merged_keys_vals_1.count(key) == 0){
-                    // cout << "Key " << key << " does not exist in merged_keys_vals_1" << endl;
                     merged_keys_vals_1[key] = val;
                 }
                 else{
                     cout << "Key " << key << " exists in merged_keys_vals_1" << endl;
                     merged_keys_vals_1[key] += val;
                 }
-                // cout << "Merged_keys_vals_1[" << key << "] = " << merged_keys_vals_1[key] << endl;
                 // 2. Calculate inner product of heavy part and light part
                 uint32_t lightValEst = sketch2.fermatEle->undecoded_query((char*)&key);
                 if((int)lightValEst < 0)
                     lightValEst = 0;
                 uint32_t lightValWithDecoding = sketch2.query_only_light_part((char*)&key);
                 innerProduct_heavy_light += val * lightValEst;
-                // if(val * lightValEst > 1000)
-                //     cout << "heavy_light_ValEst is " << val * lightValEst << endl;
                 if(lightValEst != lightValWithDecoding)
                     outFile << key << ", heavy, light, " << val << ", " << lightValEst << ", " << val << ", " << lightValWithDecoding << ", " << val * lightValEst << ", " << val * lightValWithDecoding << endl;
-                // cout << "InnerProduct is " << innerProduct << endl;
             }
         }
         for(int j = 0; j < MAX_VALID_COUNTER; ++j){
             uint32_t key = sketch2.heavy_part->buckets[i].key[j];
             uint32_t originalVal = sketch2.heavy_part->buckets[i].val[j];
             uint32_t val = GetCounterVal(originalVal);
-            //key!=0 and key exists in sketch1
             if(key != 0){
                 if(merged_keys_vals_1.count(key) > 0){
                     innerProduct_heavy += merged_keys_vals_1[key] * val;
                     // 2. Calculate inner product of heavy part and light part
                 }
-                // cout << "Key " << key << endl;
                 uint32_t lightValEst = sketch1.fermatEle->undecoded_query((char*)&key);
                 if((int)lightValEst < 0)
                     lightValEst = 0;
@@ -920,23 +857,6 @@ long double InnerProduct(FLCSketch<bucket_num>& sketch1, FLCSketch<bucket_num>& 
     cout << "Inner product with 1 light part and 2 heavy part involved is " << innerProduct_light_heavy << endl;
     cout << "Inner product with only heavy part involved is " << innerProduct_heavy << endl;
     cout << "Total inner product is " << innerProduct << endl;
-
-
-    // 3. Calculate inner product of light part
-    // long double Join(Sketch*_other){
-	// 	const AGMS* other=(AGMS*)_other;
-	// 	long double res[MAX_HASH_NUM];
-	// 	for (int i = 0; i < d; i++){
-	// 		long double k=0;
-	// 		for (int j = 0; j < w; j++)
-	// 			k+=1ll*counter[i][j]*other->counter[i][j];
-	// 		res[i]=1.0*k/w;
-	// 	}
-	// 	long double re=0;
-	// 	for(int i=0;i<d;i++)re+=res[i];
-	// 	return 1.0*re/d;
-	// }
-    
     outFile.close();
     return innerProduct;
 }
