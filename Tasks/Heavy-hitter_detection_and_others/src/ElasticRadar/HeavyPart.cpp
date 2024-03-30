@@ -20,7 +20,6 @@ HeavyPart<bucket_num>::~HeavyPart(){}
 template<int bucket_num>
 void HeavyPart<bucket_num>::clear()
 {
-    // memset(buckets, 0, sizeof(Bucket) * bucket_num);
     memset(buckets, 0, sizeof(Bucket) * num_bucket);
 }
 
@@ -269,10 +268,6 @@ int HeavyPart<bucket_num>::query(uint8_t *key)
     for(int i = 0; i < MAX_VALID_COUNTER; ++i)
         if(buckets[pos].key[i] == fp)
 		{
-			//printf("Shot!\n");
-			// if(buckets[pos].val[i]>>31 == 1){
-			// 	printf("Meet Neg in Heavypart, %u\n", buckets[pos].val[i]);
-			// }
 			return buckets[pos].val[i];
 		}
 #endif
@@ -298,6 +293,5 @@ template<int bucket_num>
 int HeavyPart<bucket_num>::CalculateFP(uint8_t *key, uint32_t &fp)
 {
     fp = *((uint32_t*)key);
-    // return CalculateBucketPos(fp) % bucket_num;
     return CalculateBucketPos(fp) % num_bucket;
 }
