@@ -57,7 +57,7 @@ int main()
     printf("Sizes: %d, %d\n", true_freqs[0].size(), true_freqs[1].size());
 
     // FLCSketch<bucket_num> sketch_result = Union<bucket_num>(*sketches[0], *sketches[1], init_seed);
-    long double calculated_innerproduct = InnerProduct<bucket_num>(*sketches[0], *sketches[1]);
+    long double calculated_innerproduct = InnerProduct<bucket_num>(*sketches[0], *sketches[1], true);
 
     //Real inner product
     long double real_innerproduct = 0;
@@ -69,8 +69,8 @@ int main()
     printf("Calculated inner product: %Lf\n", calculated_innerproduct);
     printf("Error rate: %Lf\n", (real_innerproduct - calculated_innerproduct) / real_innerproduct);
 
-    sketches[0]->write2file("innerp_sketch1.txt");
-    sketches[1]->write2file("innerp_sketch2.txt");
+    // sketches[0]->write2file("innerp_sketch1.txt");
+    // sketches[1]->write2file("innerp_sketch2.txt");
     
     /*-*-*-* End of packet insertion *-*-*-*/
 

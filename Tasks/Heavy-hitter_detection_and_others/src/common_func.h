@@ -88,7 +88,7 @@ uint32_t ReadNTraces(int n)
 uint32_t myReadTraces()
 {
   uint32_t total_pck_num = 0;
-  string filename130000 = "/home/FLC/ElasticSketchCode/data/0.dat";
+  string filename130000 = "/home/FLC/ERSketch/datasample/0.dat";
   char tmp[13] = {0};
   FILE *file1 = fopen(filename130000.c_str(), "r");
   if (file1 == NULL)
@@ -119,7 +119,7 @@ uint32_t ReadTraces()
 {
   double starttime, nowtime;
   uint32_t total_pck_num = 0;
-  string filename130000 = "/home/FLC/ERSketch/data/0.dat";
+  string filename130000 = "/home/FLC/ERSketch/datasample/0.dat";
   // string filename130000 = "../data/130000.dat";
   char tmp[21] = {0};
   FILE *file1 = fopen(filename130000.c_str(), "r");

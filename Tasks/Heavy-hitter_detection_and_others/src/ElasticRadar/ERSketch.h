@@ -128,7 +128,6 @@ public:
         //heavy part
         uint8_t swap_key[KEY_LENGTH_4];
         uint32_t swap_val = 0;
-        
         //tracking 
         int result = heavy_part->insert((uint8_t *)key, swap_key, swap_val, f);
         uint32_t keysfing = *(uint32_t *)key;
@@ -140,9 +139,6 @@ public:
         }
 
         int sign = 1;
-        // if(ifFermatCount){
-        //     sign = fermatEle->get_sign(key, 2);
-        // }
         pair<int, int> valuePair = std::make_pair(result, GetCounterVal(swap_val));
         insert_tracking[keysfing].push_back(valuePair);
 
@@ -345,22 +341,22 @@ public:
         decode_track[*(uint32_t *)key] = vector<int>{(int)GetCounterVal(hp_cnt), 0, 0};
         return 0;
     }
-    // double get_entropy(vector<double> &distribution)
-    // {
-    //     double entropy = 0.0;
-    //     double tot = 0.0;
-    //     double entr = 0.0;
-    //     for (int i = 1; i < distribution.size(); i++)
-    //     {
-    //         if(distribution[i] < 1.0)
-    //             continue;
-    //         tot += i * (int)distribution[i];
-    //         entr += i * distribution[i] * log2(i);
-    //     }
-    //     //tot = tot_packets;
-    //     entropy = -entr / tot + log2(tot);
-    //     return entropy;
-    // }
+    double get_entropy(vector<double> &distribution)
+    {
+        double entropy = 0.0;
+        double tot = 0.0;
+        double entr = 0.0;
+        for (int i = 1; i < distribution.size(); i++)
+        {
+            if(distribution[i] < 1.0)
+                continue;
+            tot += i * (int)distribution[i];
+            entr += i * distribution[i] * log2(i);
+        }
+        //tot = tot_packets;
+        entropy = -entr / tot + log2(tot);
+        return entropy;
+    }
     void get_heavy_hitters(set<uint32_t> &hh){
         for (auto i : Eleresult)
         {
@@ -812,7 +808,7 @@ void Difference(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2, 
 }
 
 template<int bucket_num>
-long double InnerProduct(FLCSketch<bucket_num>& sketch1, FLCSketch<bucket_num>& sketch2)
+long double InnerProduct(FLCSketch<bucket_num>& sketch1, FLCSketch<bucket_num>& sketch2, bool enable_fast = true)
 {
     cout << "Enter InnerProduct" << endl;
     std::ofstream outFile("./outputs/innerP_result_compare.csv");
@@ -825,22 +821,37 @@ long double InnerProduct(FLCSketch<bucket_num>& sketch1, FLCSketch<bucket_num>& 
     int array_num = sketch1.get_light_array_num();
     int entry_num = sketch1.get_light_entry_num();
     long double res[array_num];
-    for (int i = 0; i < array_num; i++)
-    {
-        long double k = 0;
-        for (int j = 0; j < entry_num; j++)
-            k += 1ll * sketch1.fermatEle->get_counter(i, j) * sketch2.fermatEle->get_counter(i, j);
-        res[i] = 1.0 * k / entry_num; //TODO: check if this is correct
+    if(enable_fast){
+        for (int i = 0; i < array_num; i++)
+        {
+            long double k = 0;
+            for (int j = 0; j < entry_num; j++)
+                k += 1ll * sketch1.fermatEle->get_counter(i, j) * sketch2.fermatEle->get_counter(i, j);
+            res[i] = 1.0 * k / entry_num; //TODO: check if this is correct
+        }
+        long double re = 0;
+        for (int i = 0; i < array_num; i++)
+            re += res[i];
+        innerProduct_light = 1.0 * re / array_num;
     }
-    long double re = 0;
-    for (int i = 0; i < array_num; i++)
-        re += res[i];
-    innerProduct_light = 1.0 * re / array_num;
     // innerProduct += innerProduct_light;
 
     // cout << "Total inner product is " << innerProduct << endl;
     sketch1.decode();
     sketch2.decode();
+    if(!enable_fast){
+        cout << "Not using fast mode!" << endl;
+        for(auto k:sketch2.Eleresult){
+            uint32_t key = k.first;
+            uint32_t val = k.second;
+            if(sketch1.Eleresult.count(key) == 0){
+                continue;
+            }
+            else{
+                innerProduct_light += sketch1.Eleresult[key] * val;
+            }
+        }
+    }
 
     // 1. Calculate inner product of heavy part
     for (int i = 0; i < bucket_num; i++)
@@ -879,13 +890,6 @@ long double InnerProduct(FLCSketch<bucket_num>& sketch1, FLCSketch<bucket_num>& 
                 // cout << "InnerProduct is " << innerProduct << endl;
             }
         }
-        // for(int j = 0; j < MAX_VALID_COUNTER; ++j){
-        //     uint32_t key = sketch2.heavy_part->buckets[i].key[j];
-        //     uint32_t val = sketch2.heavy_part->buckets[i].val[j];
-        //     if(key != 0){
-        //         merged_keys_vals_2[key] += val;
-        //     }
-        // }
         for(int j = 0; j < MAX_VALID_COUNTER; ++j){
             uint32_t key = sketch2.heavy_part->buckets[i].key[j];
             uint32_t originalVal = sketch2.heavy_part->buckets[i].val[j];
@@ -906,24 +910,6 @@ long double InnerProduct(FLCSketch<bucket_num>& sketch1, FLCSketch<bucket_num>& 
                     outFile << key << ", light, heavy, " << lightValEst << ", " << val << ", " << lightValWithDecoding << "," << val << ", " << val * lightValEst << ", " << val * lightValWithDecoding << endl;
             }
         }
-
-        // 2. Calculate inner product of heavy part and light part
-        // for(int j = 0; j < MAX_VALID_COUNTER; ++j){
-        //     uint32_t key = sketch1.heavy_part->buckets[i].key[j];
-        //     uint32_t val = sketch1.heavy_part->buckets[i].val[j];
-        //     if(key != 0){
-        //         int32_t lightValEst = sketch2.fermatEle->undecoded_query((char*)&key);
-        //         innerProduct += val * lightValEst;
-        //     }
-        // }
-        // for(int j = 0; j < MAX_VALID_COUNTER; ++j){
-        //     uint32_t key = sketch2.heavy_part->buckets[i].key[j];
-        //     uint32_t val = sketch2.heavy_part->buckets[i].val[j];
-        //     if(key != 0){
-        //         int32_t lightValEst = sketch1.fermatEle->undecoded_query((char*)&key);
-        //         innerProduct += val * lightValEst;
-        //     }
-        // }
 
     }
 
