@@ -17,3 +17,4 @@ elastic.cpp
 outputs
 Tasks/Heavy-hitter_detection_and_others/outputs/*.txt
 Tasks/Heavy-hitter_detection_and_others/*.txt
+Makefile
