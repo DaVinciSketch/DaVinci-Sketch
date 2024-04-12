@@ -102,21 +102,21 @@ void runSetExperiments(std::function<void(int, bool, int, int, bool, int, const 
     for(int endfile = 9;endfile<END_FILE_NO;endfile++){
 		cout << "Running " << taskName << " on first " << endfile << " files" << endl;
 
-		for (int i = 1; i <= 20; i++) {
-			run_func(2, true, 3, i * (TOT_MEM_IN_BYTES - HEAVY_MEM), false, endfile, taskName);
-		}
+		// for (int i = 1; i <= 20; i++) {
+		// 	run_func(2, true, 3, i * (TOT_MEM_IN_BYTES - HEAVY_MEM), false, endfile, taskName);
+		// }
 
-		for (int i = -2; i < 3; i++) {
-			run_func(2, true, 3, static_cast<int>(pow(10, i) * (TOT_MEM_IN_BYTES - HEAVY_MEM)), false, endfile, taskName);
-		}
+		// for (int i = -2; i < 3; i++) {
+		// 	run_func(2, true, 3, static_cast<int>(pow(10, i) * (TOT_MEM_IN_BYTES - HEAVY_MEM)), false, endfile, taskName);
+		// }
 
-		for (int i = 1; i <= 20; i++) {
-			run_func(2, true, 3, i * (TOT_MEM_IN_BYTES - HEAVY_MEM) / (3 * 8), false, endfile, taskName);
-		}
+		// for (int i = 1; i <= 20; i++) {
+		// 	run_func(2, true, 3, i * (TOT_MEM_IN_BYTES - HEAVY_MEM) / (3 * 8), false, endfile, taskName);
+		// }
 
-		for (int i = -2; i < 3; i++) {
-			run_func(2, true, 3, static_cast<int>(pow(10, i) * (TOT_MEM_IN_BYTES - HEAVY_MEM) / (3 * 8)), false, endfile, taskName);
-		}
+		// for (int i = -2; i < 3; i++) {
+		// 	run_func(2, true, 3, static_cast<int>(pow(10, i) * (TOT_MEM_IN_BYTES - HEAVY_MEM) / (3 * 8)), false, endfile, taskName);
+		// }
 	}
 }
 
@@ -524,7 +524,9 @@ int main()
 	// runSetExperiments(run_union, "Union");
 	// runSetExperiments(run_difference, "Difference");
 	// runSetExperiments(run_distribution, "Distribution");
-	runSetExperiments(run_innerproduct, "Innerproduct");
+	// runSetExperiments(run_innerproduct, "Innerproduct");
+	for(int mem = 10000;mem<=130000;mem+=10000)
+		run_innerproduct(2, true, 3, mem, false, 0, "Innerproduct_10000_130000");
 	return 0;
 	
 
