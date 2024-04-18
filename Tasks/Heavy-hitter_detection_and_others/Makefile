@@ -14,9 +14,9 @@ coco: ./coco.cpp
 cusketch: ./cusketch.cpp
 	g++ -O2 -o ./build/cusketch.out ./cusketch.cpp
 elasticp4: ./elasticp4.cpp
-	g++ -O2 -o ./build/elasticp4.out ./elasticp4.cpp 
-elasticradar: ./elasticradar.cpp ./src/ElasticRadar/HeavyPart.cpp
-	g++ -O2 -o ./build/elasticradar.out ./elasticradar.cpp ./src/ElasticRadar/HeavyPart.cpp $(CPPTYPE)
+	g++ -O2 -o ./build/elasticp4.out ./elasticp4.cpp
+elasticradar: ./elasticradar.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp
+	g++ -O2 -o ./build/elasticradar.out ./elasticradar.cpp ./src/ElasticRadar/HeavyPart.cpp $(CPPTYPE) ./src/ElasticRadar/common/BOBHash32.cpp
 elasticradar_difftest: ./elasticradar_difftest.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp
 	g++ -O2 -o ./build/elasticradar_difftest.out ./elasticradar_difftest.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp $(CPPTYPE)
 elasticradar_uniontest: ./elasticradar_uniontest.cpp ./src/ElasticRadar/HeavyPart.cpp ./src/ElasticRadar/common/BOBHash32.cpp
@@ -45,6 +45,20 @@ mrac: ./mrac.cpp
 	g++ -O2 -o ./build/mrac.out ./mrac.cpp
 univmon: ./univmon.cpp
 	g++ -O2 -o ./build/univmon.out ./univmon.cpp
+
+test: ./test.cpp
+	g++ -O2 -o ./build/test.out ./test.cpp
+
+davinci: ./davinci.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp
+	g++ -O2 -o ./build/davinci.out ./davinci.cpp ./src/DaVinci/HeavyPart.cpp $(CPPTYPE) ./src/DaVinci/common/BOBHash32.cpp
+find_best_davinci: ./find_best_davinci.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp
+	g++ -g -pthread -O2 -o ./build/find_best_davinci.out ./find_best_davinci.cpp ./src/DaVinci/HeavyPart.cpp $(CPPTYPE) ./src/DaVinci/common/BOBHash32.cpp
+davinci_uniontest: ./davinci_uniontest.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp
+	g++ -O2 -o ./build/davinci_uniontest.out ./davinci_uniontest.cpp ./src/DaVinci/HeavyPart.cpp $(CPPTYPE) ./src/DaVinci/common/BOBHash32.cpp
+davinci_difftest: ./davinci_difftest.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp
+	g++ -O2 -o ./build/davinci_difftest.out ./davinci_difftest.cpp ./src/DaVinci/HeavyPart.cpp $(CPPTYPE) ./src/DaVinci/common/BOBHash32.cpp
+davinci_innerproducttest: ./davinci_innerproducttest.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp
+	g++ -O2 -o ./build/davinci_innerproducttest.out ./davinci_innerproducttest.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp $(CPPTYPE)
 
 
 clean:

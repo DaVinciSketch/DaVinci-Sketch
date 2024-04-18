@@ -30,6 +30,7 @@ using std::vector;
 #define TIMES 10                   // Times of each algorithm measuring the same
                                    // trace using different hash function
 #define DATA_ROOT_15s "/data/data" // NUM_TRACE = 1, CAIDA
+#define MY_RANDOM_SEED 813
 
 struct SRCIP_TUPLE
 {
@@ -163,7 +164,8 @@ uint32_t ReadTraces()
 /********************************************************************/
 
 // Fermat_tower
-#define TOT_MEMORY TOT_MEM * 1024 
+// #define TOT_MEMORY TOT_MEM * 1024 
+#define TOT_MEMORY 500 * 1024 
 #define ELE_BUCKET 2500
 #define ELE_THRESHOLD 250
 #define USE_FING 0

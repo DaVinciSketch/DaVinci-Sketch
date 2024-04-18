@@ -1,25 +1,26 @@
 #pragma once
-// #include "tower.h"
 #include <map>
+#include "HeavyPart.h"
 #include "common/EMFSD.h"
+#include "tower.h"
+#include "fermat.h"
+#include "../common_func.h"
 
-#define TOT_MEMORY TOT_MEM * 1024 
+// #define TOT_MEMORY TOT_MEM * 1024 
+#define TOT_MEMORY 500 * 1024 
 #define ELE_BUCKET 2500
 #define ELE_THRESHOLD 250
 #define USE_FING 0
 #define INIT ((uint32_t)random() % 800)
 #define FERMAT_EM_ITER 15
 
-#include "fermat.h"
-#include "HeavyPart.h"
-#include "../common_func.h"
 
 #define HEAVY_MEM_ (150 * 1024)
 #define BUCKET_NUM_ (HEAVY_MEM_ / 64)
 
 using namespace std;
 
-void cardPrintSketchInfo(int _heavypartBucketNum, int array_num, int entry_num, int _fermatcount, int usefing, int _init) {
+void cardPrintSketchInfo(int totalMem, int _heavypartBucketNum, int towerWidth, int array_num, int entry_num, int _fermatcount, int usefing, int _init) {
     const int width = 55;
     const std::string line(width, '-');
     const std::string space(width , ' ');
@@ -35,10 +36,13 @@ void cardPrintSketchInfo(int _heavypartBucketNum, int array_num, int entry_num, 
     std::cout << "│" << space << "│" << std::endl;
     std::cout << "│   Parameters:" << std::string(width - 14, ' ') << "│" << std::endl;
     
-    std::printf("│     _heavypartBucketNum = %-7d%*s│\n", _heavypartBucketNum, width - 34, "");
-    std::printf("│     array_num           = %-7d%*s│\n", array_num, width - 34, "");
-    std::printf("│     entry_num           = %-7d%*s│\n", entry_num, width - 34, "");
-    std::printf("│     _fermatcount        = %-7d%*s│\n", _fermatcount, width - 34, "");
+    std::printf("│     Total Memory        = %-7d%*s│\n", totalMem, width - 34, "");
+    std::printf("│     HeavypartBucketNum  = %-7d%*s│\n", _heavypartBucketNum, width - 34, "");
+    std::printf("│     towerWidth_2bit     = %-7d%*s│\n", towerWidth, width - 34, "");
+    std::printf("│     towerWidth_4bit     = %-7d%*s│\n", towerWidth/2, width - 34, "");
+    std::printf("│     fermat_array_num    = %-7d%*s│\n", array_num, width - 34, "");
+    std::printf("│     fermat_entry_num    = %-7d%*s│\n", entry_num, width - 34, "");
+    std::printf("│     Fermat Type         = %-7d%*s│\n", _fermatcount, width - 34, "");
     std::printf("│     usefing             = %-7d%*s│\n", usefing, width - 34, "");
     std::printf("│     _init               = %-7d%*s│\n", _init, width - 34, "");
     
@@ -46,7 +50,7 @@ void cardPrintSketchInfo(int _heavypartBucketNum, int array_num, int entry_num, 
     std::cout << "╰" << line << "╯" << std::endl;
 }
 template<int _bucket_num>
-class FLCSketch
+class DaVinci
 {
     int light_array_num;
     int light_entry_num;
@@ -63,6 +67,7 @@ public:
 
     static constexpr int bucket_num = _bucket_num;
     HeavyPart<bucket_num> *heavy_part;
+    TowerSketch *tower;
     Fermat *fermatEle;
 
     //for test track
@@ -71,17 +76,21 @@ public:
 
     unordered_map<int32_t, vector<int>> decode_track;
 
-    
+    // (int _tot_memory = TOT_MEMORY, int _fermatEleMem = 3 * 5*ELE_BUCKET * (8 + 4 * USE_FING), int _heavypartBucketNum = BUCKET_NUM_, 
+    //     int _towerMem = TOT_MEMORY - 3 * 2*ELE_BUCKET * (8 + 4 * USE_FING) - HEAVY_MEM_, int _fermatcount = 3, 
+    //              bool usefing = USE_FING, uint32_t _init = INIT)
 public:
-    // _fermatEleMem = 3 * 5*ELE_BUCKET * (8 + 4 * USE_FING)
-    FLCSketch(int usememdefine = 0, int _tot_memory = TOT_MEMORY, int _fermatEleMem = TOT_MEMORY - HEAVY_MEM_, int _heavypartBucketNum = BUCKET_NUM_, int _fermatcount = 2, 
-                 bool usefing = USE_FING, uint32_t _init = INIT) : fermatEleMem(_fermatEleMem)
+
+    DaVinci(int _tot_memory = TOT_MEMORY, int _fermatEleMem = 3 * 2 * ELE_BUCKET * (6 + 4 * USE_FING) , int _heavypartBucketNum = 0.8*BUCKET_NUM_, 
+        int _towerMem = TOT_MEMORY - 3 * 2 * ELE_BUCKET * (6 + 4 * USE_FING) - 0.8*HEAVY_MEM_, int _fermatcount = 3, 
+                 bool usefing = USE_FING, uint32_t _init = 813, bool union_task = 0) : fermatEleMem(_fermatEleMem)
     {
-        printf("You are running Fermat_Count_IDP_CNTPM version by memory. ");
-        printf("parameters: _heavypartBucketNum = %d, _fermatEleMem = %d, _fermatcount = %d, usefing = %d, _init = %d\n", _heavypartBucketNum, _fermatEleMem, _fermatcount, usefing, _init);
+        printf("You are running DaVinci initiated by memory.\n");
+        printf("parameters: _heavypartBucketNum = %d, _towerMem = %d, _fermatEleMem = %d, _fermatcount = %d, usefing = %d, _init = %d\n", _heavypartBucketNum, _towerMem, _fermatEleMem, _fermatcount, usefing, _init);
         heavy_bucket_num = _heavypartBucketNum;
+        towerfilterMem = _towerMem;
         tot_packets = 0;
-        // fermatEle = new Fermat(fermatEleMem, usefing, _init);
+        // fermatEle = new Fermat(fermatEleMem, usefing, _init)
         if(_fermatcount == 1){
             fermatEle = new Fermat_Count(fermatEleMem, usefing, _init);
         }
@@ -89,20 +98,31 @@ public:
             cout << "Running Fermat_Count_IDP_CNTPM" << endl;
             fermatEle = new Fermat_Count_IDP_CNTPM(fermatEleMem, usefing, _init);
         }
+        else if(_fermatcount == 3){
+            cout << "Running Fermat_Count_IDP_CNTPM_48bits" << endl;
+            fermatEle = new Fermat_Count_IDP_CNTPM_48bits(fermatEleMem, usefing, _init);
+        }
         else{
             fermatEle = new Fermat_Sketch(fermatEleMem, usefing, _init);
         }
         heavy_part = new HeavyPart<bucket_num>(_heavypartBucketNum);
-        cardPrintSketchInfo(_heavypartBucketNum, fermatEle->get_array_num(), fermatEle->get_entry_num(), _fermatcount, usefing, _init);
-        
+        if(!union_task)
+            tower = new TowerSketch(_towerMem, CM, 15, MY_RANDOM_SEED);
+        else{
+            tower = new TowerSketch(_towerMem, CM, 7, MY_RANDOM_SEED);
+        }
+        light_array_num = fermatEle->get_array_num();
+        light_entry_num = fermatEle->get_entry_num();
+
+        cardPrintSketchInfo(TOT_MEMORY, heavy_part->get_bucket_num(), _towerMem*4, fermatEle->get_array_num(), fermatEle->get_entry_num(), _fermatcount, usefing, _init);
 
     }
-    FLCSketch(int _heavypartBucketNum, int array_num, int entry_num, int _fermatcount = 2, 
-                 bool usefing = USE_FING, uint32_t _init = INIT)
+    DaVinci(int _heavypartBucketNum, int array_num, int entry_num, int _fermatcount = 2, 
+                 bool usefing = USE_FING, uint32_t _init = INIT) //TODO: Update to DaVinci
     {
-        printf("You are running Fermat_Count_IDP_CNTPM version. ");
+        printf("You are running DaVinci. ");
         printf("Parameters: _heavypartBucketNum = %d, array_num = %d, entry_num = %d, _fermatcount = %d, usefing = %d, _init = %d\n", _heavypartBucketNum, array_num, entry_num, _fermatcount, usefing, _init);
-        cardPrintSketchInfo(_heavypartBucketNum, array_num, entry_num, _fermatcount, usefing, _init);
+        cardPrintSketchInfo(TOT_MEMORY, _heavypartBucketNum, 44444, array_num, entry_num, _fermatcount, usefing, _init);
         heavy_bucket_num = _heavypartBucketNum;
         light_array_num = array_num;
         light_entry_num = entry_num;
@@ -119,49 +139,72 @@ public:
             fermatEle = new Fermat_Sketch(array_num, entry_num, usefing, _init);
         }
         heavy_part = new HeavyPart<bucket_num>(_heavypartBucketNum);
+        tower = new TowerSketch(TOT_MEMORY - 3 * ELE_BUCKET * (8 + 4 * USE_FING) - HEAVY_MEM_, CM, 15, MY_RANDOM_SEED);
         
     }
-    void insert(const char *key, int f = 1)
-    {
+    void insert_after_heavy(const char *key, int f = 1){
+        uint32_t checking_id = 0;
+        for(int i=1;i<=f;i++){
+            // cout << "Inserting into tower: " << i << "/ " << swap_val << " times" << endl;
+            if(!tower->insert((char*)(key))){
+                // cout << "Insert into tower failed!" << endl;
+                int remain_val = GetCounterVal(f) - i + 1;
+                if(*(uint32_t *)key == checking_id){
+                    cout << "Insert into tower failed! remain_val is " << remain_val << endl;
+                }
+
+                fermatEle->Insert(*(uint32_t*) key, remain_val); 
+                break;
+            }
+        }
+    }
+    void insert(const char *key, int f = 1){
         //heavy part
+        uint32_t checking_id = 1452808729;
         uint8_t swap_key[KEY_LENGTH_4];
         uint32_t swap_val = 0;
         //tracking 
         int result = heavy_part->insert((uint8_t *)key, swap_key, swap_val, f);
+        if(*(uint32_t *)key == checking_id){
+            cout << "Inserting " << checking_id << " into heavy part! result is" << result << endl;
+        }
         uint32_t keysfing = *(uint32_t *)key;
         if(result == 1) { // Swap out entry
             keysfing = *(uint32_t *)swap_key;
+            if(*(uint32_t *)swap_key == checking_id){
+                cout << "Swap out " << checking_id << " from heavy part! value = " << swap_val << endl;
+            }
         }
         else if(result == 2){
             swap_val = 1;
+            memcpy(swap_key, key, KEY_LENGTH_4);
         }
 
-        int sign = 1;
-        pair<int, int> valuePair = std::make_pair(result, GetCounterVal(swap_val));
-        insert_tracking[keysfing].push_back(valuePair);
+        // cout << "Start to insert into tower! result == " << result << endl;
+        swap_val = GetCounterVal(swap_val);
+        for(int i=1;i<=swap_val;i++){
+            // cout << "Inserting into tower: " << i << "/ " << swap_val << " times" << endl;
+            if(!tower->insert((char*)(swap_key))){
+                // cout << "Insert into tower failed!" << endl;
+                int remain_val = GetCounterVal(swap_val) - i + 1;
+                if(*(uint32_t *)swap_key == checking_id){
+                    cout << "Insert into tower failed! remain_val is " << remain_val << endl;
+                }
 
-        if(!ifFermatCount)
-            switch(result)
-            {
-                case 0: break; // Inserted into the heavy part and nothing to do with the light part
-                case 1: fermatEle->Insert(*(uint32_t*) swap_key, GetCounterVal(swap_val)); break;//
-                case 2: fermatEle->Insert(*(uint32_t*) key, 1); break;
-                default:
-                    printf("error return value !\n");
-                    exit(1);
-            }
-        else{
-            switch(result)
-            {
-                case 0: break;
-                case 1: {
-                    fermatEle->Insert(*(int32_t*) swap_key, GetCounterVal(swap_val)); 
-                    break;
-                    }
-                case 2: fermatEle->Insert(*(int32_t*) key, 1); break;
-                default:
-                    printf("error return value !\n");
-                    exit(1);
+                pair<int, int> valuePair = std::make_pair(result, GetCounterVal(remain_val));
+                insert_tracking[keysfing].push_back(valuePair);
+
+                // Fermat part
+                switch(result)
+                {
+                    case 0: break; // Inserted into the heavy part and nothing to do with the light part
+                    case 1: fermatEle->Insert(*(uint32_t*) swap_key, GetCounterVal(remain_val)); break;//
+                    case 2: fermatEle->Insert(*(uint32_t*) key, 1); break;
+                    default:
+                        printf("error return value !\n");
+                        exit(1);
+                }
+                break;
             }
         }
 
@@ -203,7 +246,7 @@ public:
         delete[] em_fsd_algos;
         delete[] counters;
     }
-    int decode()
+    int decode(bool use_united = 0)
     {
         // printf("Decoding...... Eleresult.size() = %d\n", Eleresult.size());
         // 创建 DataVariant 类型的实例
@@ -211,11 +254,21 @@ public:
         DataVariant variantEleresult = Eleresult;
 
         // 将 variantEleresult 传递给 Decode 函数
-        if (fermatEle->Decode(variantEleresult)) 
-            printf("Decode Successfully!\n");
-        else
-            printf("Decode Fail!\n");
+        if(use_united){
+            cout << "United decoding!" << endl;
+            if (fermatEle->united_decode(variantEleresult, tower)) 
+                printf("United decode Successfully!\n");
+            else
+                printf("Decode Fail!\n");
+        }
+        else{
+            if (fermatEle->Decode(variantEleresult)) 
+                printf("Decode Successfully!\n");
+            else
+                printf("Decode Fail!\n");
+        }
         Eleresult = std::get<std::unordered_map<int, int>>(variantEleresult);
+
         printf("Eleresult: %lu\n", Eleresult.size());
         printf("Lightpart-inserted num: %lu\n", fermatEle->insertedflows.size());
         printf("Decoded rate: %f\n", (double)Eleresult.size() / fermatEle->insertedflows.size());
@@ -225,65 +278,67 @@ public:
     }
     uint32_t query(const char *key, bool add_undecoded = 1, bool ifprint = 0)
     {
+        uint32_t checking_id = 3057151099;
         uint32_t hp_cnt = heavy_part->query((uint8_t *)key);
         uint32_t id = *(uint32_t*) key;
         uint32_t checked_id = 0;
 
+        if(id == checking_id){
+            cout << checking_id << "'s heavy_part query result: " << hp_cnt << endl;
+        }
+
         if(hp_cnt == 0 || HIGHEST_BIT_IS_1(hp_cnt))
-        // if(1)
-        {
+        {      
             if (Eleresult.count(*(uint32_t *)key))
             {
-                decode_track[*(uint32_t *)key] = vector<int>{(int)GetCounterVal(hp_cnt), Eleresult[*(uint32_t *)key], 0};
-                return (int)GetCounterVal(hp_cnt) + Eleresult[*(uint32_t *)key];
+                if(id == checking_id){
+                    cout << checking_id << " exists in Eleresult! value is " << Eleresult[*(uint32_t *)key] << endl;
+                }
+                decode_track[*(uint32_t *)key] = vector<int>{(int)GetCounterVal(hp_cnt), tower->maximum, Eleresult[*(uint32_t *)key], 0};
+                return (int)GetCounterVal(hp_cnt) + Eleresult[*(uint32_t *)key] + tower->maximum;
 
             }
-            else if(add_undecoded){
-                int cm_query = fermatEle->undecoded_query(key);
-                if(checked_id && id == checked_id){
-                    if(fermatEle->insertedflows.find(id) != fermatEle->insertedflows.end()){
-                        cout << checked_id << " exists in insertedflows!" << endl;
-                    }
-                    else{
-                        cout << checked_id << " does not exist in insertedflows!" << endl;
-                    }
+            // else if(add_undecoded){
+            //     int cm_query = fermatEle->undecoded_query(key);
+            //     if(checked_id && id == checked_id){
+            //         if(fermatEle->insertedflows.find(id) != fermatEle->insertedflows.end()){
+            //             cout << checked_id << " exists in insertedflows!" << endl;
+            //         }
+            //         else{
+            //             cout << checked_id << " does not exist in insertedflows!" << endl;
+            //         }
+            //     }
+            //     decode_track[*(uint32_t *)key] = vector<int>{(int)GetCounterVal(hp_cnt), 0, cm_query};
+            //     return (int)GetCounterVal(hp_cnt) + cm_query;
+            // }
+            else{
+                int tower_est = tower->query((char *)key);
+                if(id == checking_id){
+                    cout << checking_id << " does not exist in Eleresult! tower value is " << tower_est << endl;
                 }
-                decode_track[*(uint32_t *)key] = vector<int>{(int)GetCounterVal(hp_cnt), 0, cm_query};
-                return (int)GetCounterVal(hp_cnt) + cm_query;
+                decode_track[*(uint32_t *)key] = vector<int>{(int)GetCounterVal(hp_cnt), tower_est, 0, 0};
+                return (int)GetCounterVal(hp_cnt) + tower_est;
             }
         }
         if(id == checked_id){
             cout << checked_id << " is not in Eleresult!" << endl;
         }
-        // else
-        // {
-            // printf("Don't need CM! %d\n", (int)GetCounterVal(hp_cnt));
-            decode_track[*(uint32_t *)key] = vector<int>{(int)GetCounterVal(hp_cnt), 0, 0};
-            return (int)GetCounterVal(hp_cnt);
-        // }
-
-        // if(hp_cnt < 0){
-        //     printf("Negative in hp_cnt!\n");
-        //     printf("Key: ");
-        //     for (int i = 0; i < 4; ++i) {
-        //         printf("%02x ", (unsigned char)key[i]);
-        //     }            
-        //     printf("\n");
-        // }
-        
-        // return towerfilter->query(key);
-        // return hp_cnt;
+        decode_track[*(uint32_t *)key] = vector<int>{(int)GetCounterVal(hp_cnt),0, 0, 0};
+        return (int)GetCounterVal(hp_cnt);
     }
 
     uint32_t query_only_light_part(const char *key, bool add_undecoded = 1)
     {
         uint32_t hp_cnt = heavy_part->query((uint8_t *)key);
         uint32_t id = *(uint32_t*) key;
-        uint32_t checked_id = 3439783959;
+        uint32_t checked_id = 4153222982;
 
         if(hp_cnt == 0 || HIGHEST_BIT_IS_1(hp_cnt)){
             if (Eleresult.count(*(uint32_t *)key))
             {
+                if(id == checked_id){
+                    cout << checked_id << " exists in Eleresult! value is " << Eleresult[*(uint32_t *)key] << endl;
+                }
                 decode_track[*(uint32_t *)key] = vector<int>{(int)GetCounterVal(hp_cnt), Eleresult[*(uint32_t *)key], 0};
                 return Eleresult[*(uint32_t *)key];
             }
@@ -294,15 +349,16 @@ public:
                         cout << checked_id << " exists in insertedflows!" << endl;
                     }
                     else{
-                        cout << checked_id << "3510838475 does not exist in insertedflows!" << endl;
+                        cout << checked_id << " does not exist in insertedflows!" << endl;
                     }
+                    cout << "cm_query is " << cm_query << endl;
                 }
                 decode_track[*(uint32_t *)key] = vector<int>{(int)GetCounterVal(hp_cnt), 0, cm_query};
                 return cm_query;
             }
         }
         if(id == checked_id){
-            cout << checked_id << " is not in Eleresult!" << endl;
+            cout << checked_id << " is not in Eleresult! query_only_light_part return 0" << endl;
         }
         decode_track[*(uint32_t *)key] = vector<int>{(int)GetCounterVal(hp_cnt), 0, 0};
         return 0;
@@ -390,7 +446,9 @@ public:
             if(!all_zero_flag){
                 fprintf(fp2, "%d: ", j);
                 for(int i = 0; i < light_array_num; ++i){
-                    fprintf(fp2, "(%u, %d) ", fermatEle->get_id(i,j), fermatEle->get_counter(i,j));
+                    uint32_t id = fermatEle->get_id(i,j);
+                    int counter = fermatEle->get_counter(i,j);
+                    fprintf(fp2, "(%u, %d) ", id, counter);
                 }
                 fprintf(fp2, "\n");
             }
@@ -399,15 +457,16 @@ public:
         return true;
     }
 
-    ~FLCSketch()
+    ~DaVinci()
     {
         delete heavy_part;
         delete fermatEle;
+        delete tower;
     }
 };
 
 template<int bucket_num>
-bool compareLightpart(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2){
+bool compareLightpart(DaVinci<bucket_num> &sketch1, DaVinci<bucket_num> &sketch2){
     int array_num_1 = sketch1.get_light_array_num();
     int array_num_2 = sketch2.get_light_array_num();
     int entry_num_1 = sketch1.get_light_entry_num();
@@ -444,7 +503,7 @@ bool compareLightpart(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &ske
 
 //Check whether the two sketches are the same in Heavy_part size, light part array num and entry num
 template<int bucket_num>
-bool check_sketches_same_size(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2)
+bool check_sketches_same_size(DaVinci<bucket_num> &sketch1, DaVinci<bucket_num> &sketch2)
 {
     if(sketch1.get_heavy_bucket_num() != sketch2.get_heavy_bucket_num()){
         printf("Heavy part size is different!\n");
@@ -462,7 +521,7 @@ bool check_sketches_same_size(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_n
 }
 
 template<int bucket_num>
-void Union(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2, FLCSketch<bucket_num>& sketch3, uint32_t init_seed = 37)
+void Union(DaVinci<bucket_num> &sketch1, DaVinci<bucket_num> &sketch2, DaVinci<bucket_num>& sketch3, uint32_t init_seed = 813)
 {
     //Check whether the two sketches are the same in size
     if(!check_sketches_same_size(sketch1, sketch2)){
@@ -561,6 +620,20 @@ void Union(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2, FLCSk
         }
             
     }
+
+    //Tower union
+
+    int width0 = sketch3.tower->line[0].width;
+    for(int i = 0; i < width0; ++i){
+        sketch3.tower->add_val(0, i, (sketch1.tower->line[0].index(i) + sketch2.tower->line[0].index(i))%3);
+    }
+    int width1 = sketch3.tower->line[1].width;
+    for(int i = 0; i < width1; ++i){
+        sketch3.tower->add_val(1, i, sketch1.tower->line[1].index(i) + sketch2.tower->line[1].index(i));
+    }
+
+
+    // Fermat Union
     for(int i = 0; i < array_num; ++i){
         for(int j = 0; j < entry_num; ++j){
             uint32_t sketch3_id = ((uint64_t)(uint32_t)(sketch1.fermatEle->get_id(i,j)) + (uint64_t)(uint32_t)(sketch2.fermatEle->get_id(i,j))) % (uint64_t)PRIME_ID_IDP_CNTPM;
@@ -582,13 +655,13 @@ void Union(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2, FLCSk
     for(int i = 0; i < kickout_keys.size(); ++i){
         uint32_t key = kickout_keys[i];
         uint32_t val = kickout_vals[i];
-        sketch3.fermatEle->Insert(key, val);
+        sketch3.insert_after_heavy((char*)&key, val);
     }
     //get total num of keys in different buckets
 }
 
 template<int bucket_num>
-void Difference(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2, FLCSketch<bucket_num> &sketch3, uint32_t init_seed = 37)
+void Difference(DaVinci<bucket_num> &sketch1, DaVinci<bucket_num> &sketch2, DaVinci<bucket_num> &sketch3, uint32_t init_seed = 37)
 {
     // Check whether the two sketches are the same in size
     if (!check_sketches_same_size(sketch1, sketch2))
@@ -601,7 +674,7 @@ void Difference(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2, 
     int array_num = sketch1.get_light_array_num();
     int entry_num = sketch1.get_light_entry_num();
 
-    // FLCSketch<bucket_num> sketch3(heavy_bucket_num, array_num, entry_num, 2, 0, init_seed);
+    // DaVinci<bucket_num> sketch3(heavy_bucket_num, array_num, entry_num, 2, 0, init_seed);
     printf("info about sketch3: heavy_bucket_num = %d, array_num = %d, entry_num = %d, fermatkind = %d\n", sketch3.get_heavy_bucket_num(), sketch3.get_light_array_num(), sketch3.get_light_entry_num(), sketch3.ifFermatCount);
 
     // Heavy part
@@ -725,6 +798,27 @@ void Difference(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2, 
             }
         }
     }
+    //tower
+    for(int line_index = 0; line_index < 2; ++line_index){
+        int width0 = sketch3.tower->line[line_index].width;
+        for(int i = 0; i < width0; ++i){
+            uint32_t val1 = sketch1.tower->line[line_index].index(i);
+            uint32_t val2 = sketch2.tower->line[line_index].index(i);
+            if(val1 == 3 && line_index == 0){
+                sketch3.tower->add_val(line_index, i, 3);
+            }
+            // else if(val2 == 15 && line_index == 1){
+            //     sketch3.tower->add_val(line_index, i, 15);
+            // }
+            else if(val1 < val2){
+                sketch3.tower->add_val(line_index, i, 0);
+            }
+            else{
+                sketch3.tower->add_val(line_index, i, val1 - val2);
+            }
+        }
+    }
+
     // Kick out
     cout << "Operating kick out, kickout_keys.size() = " << kickout_keys.size() << endl;
     for (int i = 0; i < kickout_keys.size(); i++)
@@ -735,7 +829,8 @@ void Difference(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2, 
             cout << "Inserting into lightpart " << key << ", val = " << val << endl;
             cout << "id[0][4134176] = " << (uint32_t)(sketch3.fermatEle->get_id(0, 4134176)) << ", counter[0][4134176] = " << sketch3.fermatEle->get_counter(0, 4134176) << endl;
         }
-        sketch3.fermatEle->Insert(key, val);
+        // sketch3.fermatEle->Insert(key, val);
+        sketch3.insert_after_heavy((char*)&key, val);
         if(key == 1699205447){
             cout << "After inserting..." << endl;
             cout << "id[0][4134176] = " << (uint32_t)(sketch3.fermatEle->get_id(0, 4134176)) << ", counter[0][4134176] = " << sketch3.fermatEle->get_counter(0, 4134176) << endl;
@@ -748,19 +843,27 @@ void Difference(FLCSketch<bucket_num> &sketch1, FLCSketch<bucket_num> &sketch2, 
 }
 
 template<int bucket_num>
-long double InnerProduct(FLCSketch<bucket_num>& sketch1, FLCSketch<bucket_num>& sketch2, bool enable_fast = true)
+long double InnerProduct(DaVinci<bucket_num>& sketch1, DaVinci<bucket_num>& sketch2, bool enable_fast = true)
 {
     cout << "Enter InnerProduct" << endl;
     std::ofstream outFile("./outputs/innerP_result_compare.csv");
     outFile << "key, type1, type2, est_val1, est_val2, real_val1, real_val2, est_innerP, real_innerP" << endl;
     long double innerProduct_light = 0;
+    long double innerProduct_tower = 0;
+    long double innerProduct_heavy = 0;
+    long double innerProduct_heavy_tower = 0;
+    long double innerProduct_tower_heavy = 0;
     long double innerProduct_light_heavy = 0;
     long double innerProduct_heavy_light = 0;
-    long double innerProduct_heavy = 0;
+    long double innerProduct_light_tower = 0;
+    long double innerProduct_tower_light = 0;
     long double innerProduct = 0;
     int array_num = sketch1.get_light_array_num();
     int entry_num = sketch1.get_light_entry_num();
     long double res[array_num];
+
+    // lightXlight
+    std::cout << "array_num: " << array_num << ", entry_num: " << entry_num << std::endl;
     if(enable_fast){
         for (int i = 0; i < array_num; i++)
         {
@@ -774,6 +877,7 @@ long double InnerProduct(FLCSketch<bucket_num>& sketch1, FLCSketch<bucket_num>& 
             re += res[i];
         innerProduct_light = 1.0 * re / array_num;
     }
+    std::cout << "Inner product with only light part involved is " << innerProduct_light << std::endl;
     sketch1.decode();
     sketch2.decode();
     if(!enable_fast){
@@ -790,31 +894,53 @@ long double InnerProduct(FLCSketch<bucket_num>& sketch1, FLCSketch<bucket_num>& 
         }
     }
 
-    // 1. Calculate inner product of heavy part
-    for (int i = 0; i < bucket_num; i++)
+    // towerXlight
+    int width = sketch1.tower->line[1].width;
+    for(int i = 0; i < array_num; ++i){
+        
+    }
+    // lightXtower
+    // std::cout << "Start to involve heavy part!" << std::endl;
+    // sketch1.write2file("Start_involve_heavy_in_innerp.txt");
+    // heavyXheavy, heavyXlight, lightXheavy
+    for (int i = 0; i < sketch1.heavy_bucket_num; i++)
     {
         map<uint32_t, uint32_t> merged_keys_vals_1;
         map<uint32_t, uint32_t> merged_keys_vals_2;
         for(int j = 0; j < MAX_VALID_COUNTER; ++j){
             uint32_t key = sketch1.heavy_part->buckets[i].key[j];
+            if(key == 50331651){
+                cout << "We found "<< key << " in bucket1 at" << i << "th bucket " << j << "th key" << endl;
+            }
             uint32_t originalVal = sketch1.heavy_part->buckets[i].val[j];
             uint32_t val = GetCounterVal(originalVal);
             if(key != 0){
                 if(merged_keys_vals_1.count(key) == 0){
+                    if(key == 50331651){
+                        cout << "Insert Key into map " << key << endl;
+                    }
                     merged_keys_vals_1[key] = val;
                 }
                 else{
-                    cout << "Key " << key << " exists in merged_keys_vals_1" << endl;
+                    if(key == 50331651){
+                        cout << "Key " << key << " exists in merged_keys_vals_1" << endl;
+                        for(int k = 0; k < MAX_VALID_COUNTER; ++k){
+                            cout << sketch1.heavy_part->buckets[i].key[k] << " -> " << sketch1.heavy_part->buckets[i].val[k] << endl;
+                        }
+                        for(auto it = merged_keys_vals_1.begin(); it != merged_keys_vals_1.end(); ++it){
+                            cout << it->first << " ----> " << it->second << endl;
+                        }
+                    }
                     merged_keys_vals_1[key] += val;
                 }
                 // 2. Calculate inner product of heavy part and light part
                 uint32_t lightValEst = sketch2.fermatEle->undecoded_query((char*)&key);
                 if((int)lightValEst < 0)
                     lightValEst = 0;
-                uint32_t lightValWithDecoding = sketch2.query_only_light_part((char*)&key);
+                int32_t lightValWithDecoding = sketch2.query_only_light_part((char*)&key);
                 innerProduct_heavy_light += val * lightValEst;
-                if(lightValEst != lightValWithDecoding)
-                    outFile << key << ", heavy, light, " << val << ", " << lightValEst << ", " << val << ", " << lightValWithDecoding << ", " << val * lightValEst << ", " << val * lightValWithDecoding << endl;
+                // if(lightValEst != lightValWithDecoding)
+                    outFile << key << ", heavy, light, " << val << ", " << lightValEst << ", " << val << ", " << lightValWithDecoding << ", " << val * lightValEst << ", " << (int)val * lightValWithDecoding << endl;
             }
         }
         for(int j = 0; j < MAX_VALID_COUNTER; ++j){
@@ -823,16 +949,27 @@ long double InnerProduct(FLCSketch<bucket_num>& sketch1, FLCSketch<bucket_num>& 
             uint32_t val = GetCounterVal(originalVal);
             if(key != 0){
                 if(merged_keys_vals_1.count(key) > 0){
+                    if(key == 50331651){
+                        cout << "Key from bucket2 " << key << " exists in merged_keys_vals_1" << endl;
+                        for(int k = 0; k < MAX_VALID_COUNTER; ++k){
+                            cout << sketch1.heavy_part->buckets[i].key[k] << " -> " << sketch1.heavy_part->buckets[i].val[k] << endl;
+                        }
+                        for(auto it = merged_keys_vals_1.begin(); it != merged_keys_vals_1.end(); ++it){
+                            cout << it->first << " ----> " << it->second << endl;
+                        }
+                    }
                     innerProduct_heavy += merged_keys_vals_1[key] * val;
+                    if(merged_keys_vals_1[key] * val > 10000000)
+                    outFile << key << ",heavy, heavy, " << merged_keys_vals_1[key] << ", " << val << ", " << merged_keys_vals_1[key] << ", " << val << ", " << merged_keys_vals_1[key] * val << ", " << (int)merged_keys_vals_1[key] * val << endl;
                     // 2. Calculate inner product of heavy part and light part
                 }
                 uint32_t lightValEst = sketch1.fermatEle->undecoded_query((char*)&key);
                 if((int)lightValEst < 0)
                     lightValEst = 0;
-                uint32_t lightValWithDecoding = sketch1.query_only_light_part((char*)&key);
+                int32_t lightValWithDecoding = sketch1.query_only_light_part((char*)&key);
                 innerProduct_light_heavy += val * lightValEst;
-                if(lightValEst != lightValWithDecoding)
-                    outFile << key << ", light, heavy, " << lightValEst << ", " << val << ", " << lightValWithDecoding << "," << val << ", " << val * lightValEst << ", " << val * lightValWithDecoding << endl;
+                // if(lightValEst != lightValWithDecoding)
+                    outFile << key << ", light, heavy, " << lightValEst << ", " << val << ", " << lightValWithDecoding << "," << val << ", " << val * lightValEst << ", " << (int)val * lightValWithDecoding << endl;
             }
         }
 
