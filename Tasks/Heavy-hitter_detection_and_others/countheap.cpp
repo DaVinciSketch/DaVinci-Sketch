@@ -12,6 +12,12 @@ int main()
 {
     printf("Start accuracy measurement of UnivMon with level: %d, k: %d, row: %d\n", UNIV_LEVEL, UNIV_K, UNIV_ROW);
     uint32_t totnum_packet = ReadTraces();
+    for(int i=0;i<2;i++){
+        printf("traces[%d].size(): %d\n", i, traces[i].size());
+    }
+    return 0;
+
+    // uint32_t totnum_packet = ReadTraces();
     CountHeap<4, 2000, 3> *sketches[2];
     CountHeap<4, 2000, 3> *ch = NULL;
     unordered_map<uint32_t, int> true_freqs[2];

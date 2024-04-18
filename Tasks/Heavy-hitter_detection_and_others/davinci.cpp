@@ -31,10 +31,10 @@ int main()
     double ave_HH_are = 0.0;
     double ave_WMRD = 0.0, ave_entr_RE = 0.0;
     unordered_map<uint32_t, uint32_t> true_freqs[2];
-    for (int times = 0; times < TIMES; times++)//TIMES; times++)
+    for (int times = 0; times < 1; times++)//TIMES; times++)
     {
         std::cout << "times: " << times << std::endl;
-        davinci = new DaVinci<bucket_num>();
+        davinci = new DaVinci<bucket_num>(500*1024,37800,3200,269400,3,false,813+times);
         true_freqs[0].clear();
         int allwindowscnt = 1;
 
@@ -80,7 +80,8 @@ int main()
         //     std::cout << "Counter: " << pair.first << ", Count: " << pair.second << std::endl;
         // }
 
-        davinci->decode();
+        // davinci->decode(true);
+        davinci->decode(1);
         double temare = 0.0;
         // 创建一个输出文件流对象
         std::ofstream out("davinci_findwhtaresobig.csv");

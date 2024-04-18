@@ -12,9 +12,9 @@ enum Type
     Count
 };
 
-uint8_t mask1 = 3;
+// uint8_t mask1 = 3;
 // uint8_t mask1 = 1;
-uint16_t mask2 = 15;
+// uint16_t mask2 = 15;
 // uint16_t mask2 = 7;
 // class Counters
 // {
@@ -85,6 +85,8 @@ void cardPrintTowerInfo(int width1, int mask1, int width2, int mask2, int thresh
 
 class Counters {
 public:
+    uint8_t mask1 = 3;
+    uint16_t mask2 = 15;
     int mem;
     uint8_t *counters;
     int width;
@@ -132,6 +134,15 @@ public:
             counters[byteIndex] |= value << bitOffset; // Set the new value
         }
     }
+    // void add(int idx, int val){
+    //     int byteIndex = (idx * counter_w) / 8;
+    //     int bitOffset = (idx * counter_w) % 8;
+    //     uint32_t mask = (1 << counter_w) - 1;
+    //     uint32_t value = (counters[byteIndex] >> bitOffset) & mask;
+    //     value += val;
+    //     counters[byteIndex] &= ~(mask << bitOffset); // Clear the bits where the counter resides
+    //     counters[byteIndex] |= value << bitOffset; // Set the new value
+    // }
     void increment(int idx, int sign) {
         int byteIndex = (idx * counter_w) / 8;
         int bitOffset = (idx * counter_w) % 8;
@@ -187,6 +198,8 @@ public:
     int idx[2];
     int mem;
     int maximum;
+    uint8_t mask1 = 3;
+    uint16_t mask2 = 15;
     uint32_t threshold;
     TowerSketch(int w_d, Type _type = CM, uint32_t T = ELE_THRESHOLD, int _init = INIT)
     {
@@ -206,6 +219,7 @@ public:
         hash[1].initialize(_init + 1);
         hash_sign[0].initialize(_init + 2);
         hash_sign[1].initialize(_init + 3);
+        mask2 = T;
         
         cardPrintTowerInfo(mem, mask1, mem/2, mask2, T, _type, maximum);
     }
@@ -216,6 +230,9 @@ public:
     void clear()
     {
         delete[] line;
+    }
+    void add_val(int line_index, int index, int val){
+        line[line_index].increment(index, val);
     }
     bool insert(const char *key, int f = 1)
     {
@@ -432,6 +449,17 @@ public:
             int ret = min(val0, val1);
             return ret;
         }
+    }
+    bool query_if_overflow(const char *key)
+    {
+        idx[0] = hash[0].run(key, 4) % line[0].width;
+        idx[1] = hash[1].run(key, 4) % line[1].width;
+        uint32_t val0 = line[0].index(idx[0]);
+        uint32_t val1 = line[1].index(idx[1]);
+        // cout <<"Querying overflow of key: " << *(uint32_t*)key << " val0: " << val0 << " val1: " << val1 << endl;
+        if (val0 >= mask1 && val1 >= mask2)
+            return true;
+        return false;
     }
     uint32_t query8bit(const char *key)
     {

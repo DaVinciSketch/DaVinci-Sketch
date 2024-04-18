@@ -83,7 +83,7 @@ public:
 
     DaVinci(int _tot_memory = TOT_MEMORY, int _fermatEleMem = 3 * 2 * ELE_BUCKET * (6 + 4 * USE_FING) , int _heavypartBucketNum = 0.8*BUCKET_NUM_, 
         int _towerMem = TOT_MEMORY - 3 * 2 * ELE_BUCKET * (6 + 4 * USE_FING) - 0.8*HEAVY_MEM_, int _fermatcount = 3, 
-                 bool usefing = USE_FING, uint32_t _init = 813) : fermatEleMem(_fermatEleMem)
+                 bool usefing = USE_FING, uint32_t _init = 813, bool union_task = 0) : fermatEleMem(_fermatEleMem)
     {
         printf("You are running DaVinci initiated by memory.\n");
         printf("parameters: _heavypartBucketNum = %d, _towerMem = %d, _fermatEleMem = %d, _fermatcount = %d, usefing = %d, _init = %d\n", _heavypartBucketNum, _towerMem, _fermatEleMem, _fermatcount, usefing, _init);
@@ -106,7 +106,11 @@ public:
             fermatEle = new Fermat_Sketch(fermatEleMem, usefing, _init);
         }
         heavy_part = new HeavyPart<bucket_num>(_heavypartBucketNum);
-        tower = new TowerSketch(_towerMem, CM, 15, MY_RANDOM_SEED);
+        if(!union_task)
+            tower = new TowerSketch(_towerMem, CM, 15, MY_RANDOM_SEED);
+        else{
+            tower = new TowerSketch(_towerMem, CM, 7, MY_RANDOM_SEED);
+        }
         light_array_num = fermatEle->get_array_num();
         light_entry_num = fermatEle->get_entry_num();
 
@@ -138,10 +142,25 @@ public:
         tower = new TowerSketch(TOT_MEMORY - 3 * ELE_BUCKET * (8 + 4 * USE_FING) - HEAVY_MEM_, CM, 15, MY_RANDOM_SEED);
         
     }
-    void insert(const char *key, int f = 1)
-    {
+    void insert_after_heavy(const char *key, int f = 1){
+        uint32_t checking_id = 0;
+        for(int i=1;i<=f;i++){
+            // cout << "Inserting into tower: " << i << "/ " << swap_val << " times" << endl;
+            if(!tower->insert((char*)(key))){
+                // cout << "Insert into tower failed!" << endl;
+                int remain_val = GetCounterVal(f) - i + 1;
+                if(*(uint32_t *)key == checking_id){
+                    cout << "Insert into tower failed! remain_val is " << remain_val << endl;
+                }
+
+                fermatEle->Insert(*(uint32_t*) key, remain_val); 
+                break;
+            }
+        }
+    }
+    void insert(const char *key, int f = 1){
         //heavy part
-        uint32_t checking_id = 50331651;
+        uint32_t checking_id = 1452808729;
         uint8_t swap_key[KEY_LENGTH_4];
         uint32_t swap_val = 0;
         //tracking 
@@ -227,7 +246,7 @@ public:
         delete[] em_fsd_algos;
         delete[] counters;
     }
-    int decode()
+    int decode(bool use_united = 0)
     {
         // printf("Decoding...... Eleresult.size() = %d\n", Eleresult.size());
         // 创建 DataVariant 类型的实例
@@ -235,10 +254,19 @@ public:
         DataVariant variantEleresult = Eleresult;
 
         // 将 variantEleresult 传递给 Decode 函数
-        if (fermatEle->Decode(variantEleresult)) 
-            printf("Decode Successfully!\n");
-        else
-            printf("Decode Fail!\n");
+        if(use_united){
+            cout << "United decoding!" << endl;
+            if (fermatEle->united_decode(variantEleresult, tower)) 
+                printf("United decode Successfully!\n");
+            else
+                printf("Decode Fail!\n");
+        }
+        else{
+            if (fermatEle->Decode(variantEleresult)) 
+                printf("Decode Successfully!\n");
+            else
+                printf("Decode Fail!\n");
+        }
         Eleresult = std::get<std::unordered_map<int, int>>(variantEleresult);
 
         printf("Eleresult: %lu\n", Eleresult.size());
@@ -493,7 +521,7 @@ bool check_sketches_same_size(DaVinci<bucket_num> &sketch1, DaVinci<bucket_num> 
 }
 
 template<int bucket_num>
-void Union(DaVinci<bucket_num> &sketch1, DaVinci<bucket_num> &sketch2, DaVinci<bucket_num>& sketch3, uint32_t init_seed = 37)
+void Union(DaVinci<bucket_num> &sketch1, DaVinci<bucket_num> &sketch2, DaVinci<bucket_num>& sketch3, uint32_t init_seed = 813)
 {
     //Check whether the two sketches are the same in size
     if(!check_sketches_same_size(sketch1, sketch2)){
@@ -592,6 +620,20 @@ void Union(DaVinci<bucket_num> &sketch1, DaVinci<bucket_num> &sketch2, DaVinci<b
         }
             
     }
+
+    //Tower union
+
+    int width0 = sketch3.tower->line[0].width;
+    for(int i = 0; i < width0; ++i){
+        sketch3.tower->add_val(0, i, (sketch1.tower->line[0].index(i) + sketch2.tower->line[0].index(i))%3);
+    }
+    int width1 = sketch3.tower->line[1].width;
+    for(int i = 0; i < width1; ++i){
+        sketch3.tower->add_val(1, i, sketch1.tower->line[1].index(i) + sketch2.tower->line[1].index(i));
+    }
+
+
+    // Fermat Union
     for(int i = 0; i < array_num; ++i){
         for(int j = 0; j < entry_num; ++j){
             uint32_t sketch3_id = ((uint64_t)(uint32_t)(sketch1.fermatEle->get_id(i,j)) + (uint64_t)(uint32_t)(sketch2.fermatEle->get_id(i,j))) % (uint64_t)PRIME_ID_IDP_CNTPM;
@@ -613,7 +655,7 @@ void Union(DaVinci<bucket_num> &sketch1, DaVinci<bucket_num> &sketch2, DaVinci<b
     for(int i = 0; i < kickout_keys.size(); ++i){
         uint32_t key = kickout_keys[i];
         uint32_t val = kickout_vals[i];
-        sketch3.fermatEle->Insert(key, val);
+        sketch3.insert_after_heavy((char*)&key, val);
     }
     //get total num of keys in different buckets
 }
@@ -756,6 +798,27 @@ void Difference(DaVinci<bucket_num> &sketch1, DaVinci<bucket_num> &sketch2, DaVi
             }
         }
     }
+    //tower
+    for(int line_index = 0; line_index < 2; ++line_index){
+        int width0 = sketch3.tower->line[line_index].width;
+        for(int i = 0; i < width0; ++i){
+            uint32_t val1 = sketch1.tower->line[line_index].index(i);
+            uint32_t val2 = sketch2.tower->line[line_index].index(i);
+            if(val1 == 3 && line_index == 0){
+                sketch3.tower->add_val(line_index, i, 3);
+            }
+            // else if(val2 == 15 && line_index == 1){
+            //     sketch3.tower->add_val(line_index, i, 15);
+            // }
+            else if(val1 < val2){
+                sketch3.tower->add_val(line_index, i, 0);
+            }
+            else{
+                sketch3.tower->add_val(line_index, i, val1 - val2);
+            }
+        }
+    }
+
     // Kick out
     cout << "Operating kick out, kickout_keys.size() = " << kickout_keys.size() << endl;
     for (int i = 0; i < kickout_keys.size(); i++)
@@ -766,7 +829,8 @@ void Difference(DaVinci<bucket_num> &sketch1, DaVinci<bucket_num> &sketch2, DaVi
             cout << "Inserting into lightpart " << key << ", val = " << val << endl;
             cout << "id[0][4134176] = " << (uint32_t)(sketch3.fermatEle->get_id(0, 4134176)) << ", counter[0][4134176] = " << sketch3.fermatEle->get_counter(0, 4134176) << endl;
         }
-        sketch3.fermatEle->Insert(key, val);
+        // sketch3.fermatEle->Insert(key, val);
+        sketch3.insert_after_heavy((char*)&key, val);
         if(key == 1699205447){
             cout << "After inserting..." << endl;
             cout << "id[0][4134176] = " << (uint32_t)(sketch3.fermatEle->get_id(0, 4134176)) << ", counter[0][4134176] = " << sketch3.fermatEle->get_counter(0, 4134176) << endl;
@@ -785,13 +849,20 @@ long double InnerProduct(DaVinci<bucket_num>& sketch1, DaVinci<bucket_num>& sket
     std::ofstream outFile("./outputs/innerP_result_compare.csv");
     outFile << "key, type1, type2, est_val1, est_val2, real_val1, real_val2, est_innerP, real_innerP" << endl;
     long double innerProduct_light = 0;
+    long double innerProduct_tower = 0;
+    long double innerProduct_heavy = 0;
+    long double innerProduct_heavy_tower = 0;
+    long double innerProduct_tower_heavy = 0;
     long double innerProduct_light_heavy = 0;
     long double innerProduct_heavy_light = 0;
-    long double innerProduct_heavy = 0;
+    long double innerProduct_light_tower = 0;
+    long double innerProduct_tower_light = 0;
     long double innerProduct = 0;
     int array_num = sketch1.get_light_array_num();
     int entry_num = sketch1.get_light_entry_num();
     long double res[array_num];
+
+    // lightXlight
     std::cout << "array_num: " << array_num << ", entry_num: " << entry_num << std::endl;
     if(enable_fast){
         for (int i = 0; i < array_num; i++)
@@ -822,9 +893,16 @@ long double InnerProduct(DaVinci<bucket_num>& sketch1, DaVinci<bucket_num>& sket
             }
         }
     }
-    std::cout << "Start to involve heavy part!" << std::endl;
-    sketch1.write2file("Start_involve_heavy_in_innerp.txt");
-    // 1. Calculate inner product of heavy part
+
+    // towerXlight
+    int width = sketch1.tower->line[1].width;
+    for(int i = 0; i < array_num; ++i){
+        
+    }
+    // lightXtower
+    // std::cout << "Start to involve heavy part!" << std::endl;
+    // sketch1.write2file("Start_involve_heavy_in_innerp.txt");
+    // heavyXheavy, heavyXlight, lightXheavy
     for (int i = 0; i < sketch1.heavy_bucket_num; i++)
     {
         map<uint32_t, uint32_t> merged_keys_vals_1;

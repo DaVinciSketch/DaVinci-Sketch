@@ -1,4 +1,4 @@
-#include "./src/ElasticRadar/ERSketch.h"
+#include "./src/DaVinci/DaVinci.h"
 #include "./src/common_func.h"
 #define HEAVY_MEM (150 * 1024)
 #define TOT_MEM_IN_BYTES (600 * 1024)
@@ -16,9 +16,6 @@ int main()
     int _fermatcount = 2; //Use Count version with id+ and cnt +-
     bool _fing = false;
 
-    FLCSketch<bucket_num> *sketches[2];
-    FLCSketch<bucket_num> *flcsketch = NULL;
-
     // Fermat_tower *sketches[2];
     // Fermat_tower *fermat_tower = NULL;
     double aveare = 0.0, aveaae = 0.0, ave_HH = 0.0, ave_HC = 0.0, ave_card_RE = 0.0;
@@ -27,8 +24,13 @@ int main()
     unordered_map<uint32_t, uint32_t> true_freqs[2];
 
     uint32_t init_seed = INIT;
-    sketches[0] = new FLCSketch<bucket_num>(BUCKET_NUM, array_num, entry_num, _fermatcount, _fing, init_seed);
-    sketches[1] = new FLCSketch<bucket_num>(BUCKET_NUM, array_num, entry_num, _fermatcount, _fing, init_seed);
+    // sketches[0] = new FLCSketch<bucket_num>(BUCKET_NUM, array_num, entry_num, _fermatcount, _fing, init_seed);
+    // sketches[1] = new FLCSketch<bucket_num>(BUCKET_NUM, array_num, entry_num, _fermatcount, _fing, init_seed);
+    unique_ptr<DaVinci<bucket_num>> davinci0 = make_unique<DaVinci<bucket_num>>(500*1024,37800,3200,269400,3,false,813);
+    unique_ptr<DaVinci<bucket_num>> davinci1 = make_unique<DaVinci<bucket_num>>(500*1024,37800,3200,269400,3,false,813);
+    // sketches[0] = new DaVinci<bucket_num>();
+    // sketches[1] = new DaVinci<bucket_num>();
+    unique_ptr<DaVinci<bucket_num>> flcsketch = make_unique<DaVinci<bucket_num>>(500*1024,37800,3200,269400,3,false,813);
     true_freqs[0].clear();
     true_freqs[1].clear();
 
@@ -42,28 +44,29 @@ int main()
     int num1, num2 = 0;
     for (int i = 0; i < num_pkt; ++i)
     {
-        if(i%10==0){
+        // if(i%10!=0){
             ++true_freqs[0][*((uint32_t *)(traces[traceindex][i].key))];
             num1++;
-            sketches[0]->insert((const char *)(traces[traceindex][i].key), 1);
-        }
-        else{
+            davinci0->insert((const char *)(traces[traceindex][i].key), 1);
+        // }
+        // else
+        if(i%2==0)
+        {
             ++true_freqs[1][*((uint32_t *)(traces[traceindex][i].key))];
             num2++;
-            sketches[1]->insert((const char *)(traces[traceindex][i].key), 1);
+            davinci1->insert((const char *)(traces[traceindex][i].key), 1);
         }
     }
     printf("Insertion finished\n");
     printf("Sizes: %d, %d\n", true_freqs[0].size(), true_freqs[1].size());
 
-    FLCSketch<bucket_num> sketch_result = Difference<bucket_num>(*sketches[0], *sketches[1], init_seed);
+    Difference<bucket_num>(*davinci0, *davinci1, *flcsketch, init_seed);
     // return 0;
-    flcsketch = &sketch_result;
-    sketches[0]->write2file("sketch1.txt");
-    sketches[1]->write2file("sketch2.txt");
-    sketch_result.write2file("sketch_result.txt");
+    davinci0->write2file("sketch1.txt");
+    davinci1->write2file("sketch2.txt");
+    flcsketch->write2file("sketch_result.txt");
     
-    flcsketch->decode();
+    flcsketch->decode(1);
 
     //Real result of difference
     unordered_map<uint32_t, int32_t> real_result;
@@ -116,8 +119,8 @@ int main()
     outFile.close();
     //
     // printf("[INFO] End of insertion process...Num.flow:%d\n", (int)true_freq.size());
-    sketches[0]->decode();
-    sketches[1]->decode();
+    davinci0->decode(1);
+    davinci1->decode(1);
 
     //ARE calculation
     double totalARE = 0.0;
@@ -138,16 +141,16 @@ int main()
     std::ofstream outFile2("result_compare.csv");
     outFile2 << "flowid,sketch0real,sketch1real,sketch0decode,sketch1decode,real_result,flcsketch_result\n";
     for (const auto& elem : real_result) {
-        int cnt0 = sketches[0]->query((char*)&(elem.first), true);
-        int cnt1 = sketches[1]->query((char*)&(elem.first), true);
+        int cnt0 = davinci0->query((char*)&(elem.first), true);
+        int cnt1 = davinci1->query((char*)&(elem.first), true);
         int cnt = flcsketch->query((char*)&(elem.first), true);
         // if(elem.second != cnt)// && elem.second > 0)
         // if(uint32_t(elem.first) == 3948909411 || elem.second != cnt)// && elem.second > 0)
         if(flcsketch->decode_track[elem.first][2] != 0)// && elem.second > 0)
             outFile2 << uint32_t(elem.first) << "," << true_freqs[0][elem.first] << "," 
             << true_freqs[1][elem.first] << "," 
-            << cnt0 << "(" << sketches[0]->decode_track[elem.first][0] << "-" << sketches[0]->decode_track[elem.first][1] << "-" << sketches[0]->decode_track[elem.first][2] << ")" << ","
-            << cnt1 << "(" << sketches[1]->decode_track[elem.first][0] << "-" << sketches[1]->decode_track[elem.first][1] << "-" << sketches[1]->decode_track[elem.first][2] << ")" << ","
+            << cnt0 << "(" << davinci0->decode_track[elem.first][0] << "-" << davinci0->decode_track[elem.first][1] << "-" << davinci0->decode_track[elem.first][2] << ")" << ","
+            << cnt1 << "(" << davinci1->decode_track[elem.first][0] << "-" << davinci1->decode_track[elem.first][1] << "-" << davinci1->decode_track[elem.first][2] << ")" << ","
                 << elem.second << "," 
                 << cnt << "(" << flcsketch->decode_track[elem.first][0] << "-" << flcsketch->decode_track[elem.first][1] << "-" << flcsketch->decode_track[elem.first][2] <<")" << "\n";
     }
@@ -156,9 +159,4 @@ int main()
     flcsketch->write2file("sketch_result_afterdecoding.txt");
     
     /*-*-*-* End of packet insertion *-*-*-*/
-
-
-    delete sketches[0];
-    delete sketches[1];
-
 }

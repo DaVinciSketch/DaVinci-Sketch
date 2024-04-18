@@ -16,7 +16,6 @@ int main()
     int _fermatcount = 2; //Use Count version with id+ and cnt +-
     bool _fing = false;
 
-    FLCSketch<bucket_num> *sketch;
 
     double aveare = 0.0, aveaae = 0.0, ave_HH = 0.0, ave_HC = 0.0, ave_card_RE = 0.0;
     double ave_HH_are = 0.0;
@@ -24,6 +23,7 @@ int main()
     unordered_map<uint32_t, uint32_t> true_freq;
 
     uint32_t init_seed = INIT;
+    
     sketch = new DaVinci<bucket_num>(BUCKET_NUM, array_num, entry_num, _fermatcount, _fing, init_seed);
     true_freq.clear();
 

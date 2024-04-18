@@ -65,6 +65,10 @@ public:
 
     // virtual bool verify(int row, int col, uint32_t &flow_id, uint32_t &fing) = 0;
     virtual int verify(int row, int col, uint32_t &flow_id, uint32_t &fing) = 0;
+    virtual int united_verify(int row, int col, uint32_t &flow_id, uint32_t &fing, TowerSketch* tower) {
+        cout << "united_verify() is not implemented in root class!" << endl;
+        return -1;
+    }
 
     virtual void display() = 0;
     virtual int query(const char *key) = 0;
@@ -72,6 +76,10 @@ public:
     // virtual bool Decode(unordered_map<uint32_t, int> &result);
     // virtual bool Decode(unordered_map<int32_t, int> &result);
     virtual bool Decode(DataVariant& data) = 0;
+    virtual bool united_decode(DataVariant& data, TowerSketch* tower){
+        cout << "Decode() is not implemented in root class!" << endl;
+        return false;
+    }
     virtual int get_id(int n_array, int n) = 0;
     virtual int get_counter(int n_array, int n) = 0;
 
@@ -1797,20 +1805,29 @@ public:
 
     void clear_array() override
     {
-        for (int i = 0; i < array_num; ++i)
+        for (int i = 0; i < array_num; ++i){
             delete[] id[i];
+            id[i] = nullptr;
+        }
         delete[] id;
+        id = nullptr;
 
         if (fingerprint)
         {
-            for (int i = 0; i < array_num; ++i)
+            for (int i = 0; i < array_num; ++i){
                 delete[] fingerprint[i];
+                fingerprint[i] = nullptr;
+            }
             delete[] fingerprint;
+            fingerprint = nullptr;
         }
 
-        for (int i = 0; i < array_num; ++i)
+        for (int i = 0; i < array_num; ++i){
             delete[] counter[i];
+            counter[i] = nullptr;
+        }
         delete[] counter;
+        counter = nullptr;
     }
 
     Fermat_Count_IDP_CNTPM_48bits(int _a, int _e, bool _fing, uint32_t _init) : array_num(_a), entry_num(_e), use_fing(_fing), fingerprint(nullptr), hash_fp(nullptr)
@@ -1856,10 +1873,16 @@ public:
     ~Fermat_Count_IDP_CNTPM_48bits() override
     {
         clear_array();
-        clear_look_up_table();
-        if (hash_fp)
+        // clear_look_up_table();
+        if (hash_fp){
             delete hash_fp;
-        delete[] hash;
+            hash_fp = nullptr;
+        }
+        if(hash){
+            delete[] hash;
+            hash = nullptr;
+        }
+        // delete[] hash;
     }
 
     int get_sign(int32_t flow_id, int i){
@@ -1954,7 +1977,7 @@ public:
 #if DEBUG_F
         ++pure_cnt;
 #endif
-        uint32_t checked_id = 0;
+        uint32_t checked_id = -1;
         int32_t cnt_value = counter[row][col];
         uint32_t id_value = id[row][col];
         uint64_t temp = 0;
@@ -1999,6 +2022,89 @@ public:
         if(printCondition)
         cout << "mapto is right! row = " << row << " col = " << col << " mapto = " << mapto << endl;
         return 1;
+    }
+
+    int united_verify(int row, int col, uint32_t &flow_id, uint32_t &fing, TowerSketch* tower) override
+    {
+        
+#if DEBUG_F
+        ++pure_cnt;
+#endif
+        int returnflag = -1;
+        uint32_t checked_id = 0;
+        int32_t cnt_value = counter[row][col];
+        uint32_t id_value = id[row][col];
+        uint64_t temp = 0;
+        if (cnt_value & 0x80000000){
+            temp = checkTable_count((~cnt_value + 1), PRIME_ID_IDP_CNTPM);
+            flow_id = mulMod32(id_value, temp, PRIME_ID_IDP_CNTPM);
+        }
+        else{
+            temp = checkTable(abs(cnt_value));
+            flow_id = mulMod32(id_value, temp, PRIME_ID_IDP_CNTPM);
+        }
+
+        bool printCondition = 0;//(flow_id == checked_id || col == 7326 || col == 4446 || col == 6509 || col == 3236 || col == 1085 || col == 1348);
+
+        if(printCondition){
+            cout << "flow_id is checked_id! counter[row][col] = " << counter[row][col] << " id[row][col] = " << id[row][col] << "row = " << row << " col = " << col << endl;
+        }
+        
+        if (use_fing)
+        {
+            fing = powMod32(cnt_value, PRIME_FING - 2, PRIME_FING);
+            fing = mulMod32(fingerprint[row][col], fing, PRIME_FING);
+        }
+        int mapto = hash[row].run((char *)&flow_id, sizeof(int32_t)) % entry_num;
+        if (!(mapto == col)){
+            flow_id = mulMod32(PRIME_ID_IDP_CNTPM - id_value, temp, PRIME_ID_IDP_CNTPM);
+            mapto = hash[row].run((char *)&flow_id, sizeof(int32_t)) % entry_num;
+            if (!(mapto == col)){
+                if(printCondition)
+                cout << "mapto is wrong! row = " << row << " col = " << col << " mapto = " << mapto << endl;
+                // return false;
+                returnflag = 0;
+                goto verify_return;
+            }
+            else{
+                if(printCondition)
+                cout << "mapto is right by using reverse! row = " << row << " col = " << col << " mapto = " << mapto << endl;
+                // return 2;
+                if(!tower->query_if_overflow((char *)&flow_id)){
+                    returnflag = 0;
+                    goto verify_return;
+                }
+                returnflag = 2;
+                goto verify_return;
+            }
+        }
+        if (use_fing && !(hash_fp->run((char *)&flow_id, sizeof(int32_t)) % PRIME_FING == fing)){
+            cout << "fing is wrong!" << endl;
+            // return false;
+            returnflag = 0;
+            goto verify_return;
+        }
+        if(!tower->query_if_overflow((char *)&flow_id)){
+            returnflag = 0;
+            goto verify_return;
+        }
+        
+        if(printCondition)
+            cout << "mapto is right! row = " << row << " col = " << col << " mapto = " << mapto << endl;
+        // return 1;
+        returnflag = 1;
+verify_return:
+
+        if(tower->query_if_overflow((char *)&flow_id) && returnflag == 0){
+            cout << "[[[[[[[[[[[[[Cnt_value = " << cnt_value << " id_value = " << id_value << " temp = " << temp << " flow_id = " << flow_id << endl;
+            cout << "[[[[[[[[[[[[[Tower overflow said yes! But verify value is " << returnflag << endl;
+        }
+        else if(!tower->query_if_overflow((char *)&flow_id) && returnflag != 0){
+            cout << "[[[[[[[[[[[[[Cnt_value = " << cnt_value << " id_value = " << id_value << " temp = " << temp << " flow_id = " << flow_id << endl;
+            cout << "[[[[[[[[[[[[[Tower overflow said no! But verify value is " << returnflag << endl;
+        }
+
+        return returnflag;
     }
 
     void display() override
@@ -2324,6 +2430,234 @@ public:
                         Delete_in_one_bucket(i, check, i, check, sign);
                     }
                     else if (verify(i, check, temp_flow_id, temp_fin) == 2)
+                    {
+                        sign = get_sign(i, (char *)&temp_flow_id, sizeof(uint32_t));
+                        // find pure bucket
+                        if(id[i][check] == checked_id){
+                            cout << "(2)Find a pure bucket!" << "i: " << i << " check: " << check << " counter[i][j] = " << counter[i][check] << " id[i][check] = " << " sign = " << sign << endl;
+                        }
+                        flow_id = (int32_t)temp_flow_id;
+                        fing = (int32_t)temp_fin;
+                        if (result.count(flow_id) != 0)
+                        {
+                            result[flow_id] += sign * counter[i][check];
+                            
+                        }
+                        else
+                        {
+                            result[flow_id] = sign * counter[i][check];
+                            
+                        }
+                        // delete flow from other rows
+                        for (int t = 0; t < array_num; ++t)
+                        {
+                            if (t == i)
+                                continue;
+                            uint32_t pos = hash[t].run((char *)&flow_id, sizeof(uint32_t)) % entry_num;
+                            int other_sign = get_sign(t, (char *)&temp_flow_id, sizeof(uint32_t));
+                            Delete_in_one_bucket(t, pos, i, check, other_sign);
+                            // cout << "Pushing " << pos << " to " << t << std::endl;
+                            candidate[t].push(pos);
+                        }
+                        Delete_in_one_bucket(i, check, i, check, sign);
+                    }
+                }
+            }
+            if (pause){
+                printf("Break because pauce! acc = %d.\n", acc);
+                break;
+            }
+            if (acc > 100000){
+                printf("Break because acc is too big!\n");
+                break;
+            }
+        }
+
+        delete[] candidate;
+        bool flag = true;
+        for (int i = 0; i < array_num; ++i)
+            for (int j = 0; j < entry_num; ++j)
+                if (counter[i][j] != 0)
+                {
+                    flag = false;
+                }
+        for (auto p : result)
+        {
+            if (p.second == 0)
+            {
+                result.erase(p.first);
+            }
+        }
+        return flag;
+    }
+
+    bool united_decode(DataVariant& data, TowerSketch* tower) override
+    {
+        uint32_t checked_id = 0;
+        auto* mapPtr = std::get_if<std::unordered_map<int32_t, int>>(&data);
+        if (!mapPtr) {
+            return false;  // 如果类型不匹配，则直接返回 false
+        }
+        
+        auto& result = *mapPtr;
+
+        idcpy = new uint32_t *[array_num];
+        for (int i = 0; i < array_num; i++)
+        {
+            idcpy[i] = new uint32_t[entry_num];
+            for (int j = 0; j < entry_num; j++)
+                idcpy[i][j] = id[i][j];
+        }
+        if (use_fing)
+        {
+            fingcpy = new int32_t *[array_num];
+            for (int i = 0; i < array_num; i++)
+            {
+                fingcpy[i] = new int32_t[entry_num];
+                for (int j = 0; j < entry_num; j++)
+                    fingcpy[i][j] = fingerprint[i][j];
+            }
+        }
+        countercpy = new int16_t *[array_num];
+        for (int i = 0; i < array_num; i++)
+        {
+            countercpy[i] = new int16_t[entry_num];
+            for (int j = 0; j < entry_num; j++)
+                countercpy[i][j] = counter[i][j];
+        }
+        decodeflag = 1;
+        queue<int> *candidate = new queue<int>[array_num];
+        int32_t flow_id = 0;
+        int32_t fing = 0;
+        // first round
+        for (int i = 0; i < array_num; ++i){
+            int sign = 0;
+            bool sign_cnt_fetch_pos = 0;
+            for (int j = 0; j < entry_num; ++j)
+            {
+                uint32_t temp_flow_id = 0;
+                uint32_t temp_fin = 0;
+
+                if (counter[i][j] == 0)
+                {
+                    continue;
+                }
+                else if (united_verify(i, j, temp_flow_id, temp_fin, tower) == 1)
+                {
+                    // find pure bucket
+                    sign = get_sign(i, (char *)&temp_flow_id, sizeof(uint32_t));
+                    flow_id = (int32_t)temp_flow_id;
+                    fing = (int32_t)temp_fin;
+                    if (result.count(flow_id) != 0){
+                        result[flow_id] += abs(counter[i][j]);
+                    }
+                    else{
+                        result[flow_id] = abs(counter[i][j]);
+                    }
+                    // delete flow from other rows
+                    for (int t = 0; t < array_num; ++t){
+                        if (t == i)
+                            continue;
+                        uint32_t pos = hash[t].run((char *)&flow_id, sizeof(uint32_t)) % entry_num;
+                        int other_sign = get_sign(t, (char *)&temp_flow_id, sizeof(uint32_t));
+                        
+                        Delete_in_one_bucket(t, pos, i, j, other_sign);
+                        candidate[t].push(pos);
+                    }
+                    Delete_in_one_bucket(i, j, i, j, sign);
+                }
+                else if (united_verify(i, j, temp_flow_id, temp_fin, tower) == 2){
+                    sign = get_sign(i, (char *)&temp_flow_id, sizeof(uint32_t));
+                    flow_id = (int32_t)temp_flow_id;
+                    fing = (int32_t)temp_fin;
+                    if (result.count(flow_id) != 0){
+                        result[flow_id] += sign * counter[i][j];
+                    }
+                    else{
+                        result[flow_id] = sign * counter[i][j];
+                    }
+                    // delete flow from other rows
+                    for (int t = 0; t < array_num; ++t)
+                    {
+                        if (t == i)
+                            continue;
+                        uint32_t pos = hash[t].run((char *)&flow_id, sizeof(uint32_t)) % entry_num;
+                        int other_sign = get_sign(t, (char *)&temp_flow_id, sizeof(uint32_t));
+
+                        Delete_in_one_bucket(t, pos, i, j, other_sign);
+                        candidate[t].push(pos);
+                    }
+                    Delete_in_one_bucket(i, j, i, j, sign);
+                }                
+            }
+        }
+
+        bool pause;
+        int acc = 0;
+        while (true)
+        {
+            // for (int i = 0; i < array_num; ++i) {
+            //     // 创建一个副本队列
+            //     std::queue<int> q = candidate[i];
+
+            //     std::cout << "Queue " << i << ": ";
+            //     while (!q.empty()) {
+            //         std::cout << q.front() << " ";
+            //         q.pop();
+            //     }
+            //     std::cout << std::endl;
+            // }
+            acc++;
+            pause = true;
+            for (int i = 0; i < array_num; ++i)
+            {
+                int sign = get_sign(i, (char *)&flow_id, sizeof(uint32_t));
+                if (!candidate[i].empty())
+                    pause = false;
+                while (!candidate[i].empty())
+                {
+                    int check = candidate[i].front();
+                    // cout << "checking: " << check << " of array " << i << std::endl;
+                    candidate[i].pop();
+                    uint32_t temp_flow_id = 0;
+                    uint32_t temp_fin = 0;
+                    if (counter[i][check] == 0)
+                    {
+                        continue;
+                    }
+                    else if (united_verify(i, check, temp_flow_id, temp_fin, tower) == 1)
+                    {
+                        sign = get_sign(i, (char *)&temp_flow_id, sizeof(uint32_t));
+                        if(id[i][check] == checked_id){
+                            cout << "(1)Find a pure bucket!" << "i: " << i << " check: " << check << " counter[i][check] = " << counter[i][check] << " id[i][check] = " << " sign = " << sign << endl;
+                        }
+                        // find pure bucket
+                        flow_id = (int32_t)temp_flow_id;
+                        fing = (int32_t)temp_fin;
+                        if (result.count(flow_id) != 0)
+                        {
+                            result[flow_id] += abs(counter[i][check]);
+                            
+                        }
+                        else
+                        {
+                            result[flow_id] = abs(counter[i][check]);
+                            // if(counter[i][check] != abs(counter[i][check])) cout<<counter[i][check]<<" "<<abs(counter[i][check])<<" ";
+                        }
+                        // delete flow from other rows
+                        for (int t = 0; t < array_num; ++t)
+                        {
+                            if (t == i)
+                                continue;
+                            uint32_t pos = hash[t].run((char *)&flow_id, sizeof(uint32_t)) % entry_num;
+                            int other_sign = get_sign(t, (char *)&temp_flow_id, sizeof(uint32_t));
+                            Delete_in_one_bucket(t, pos, i, check, other_sign);
+                            candidate[t].push(pos);
+                            // cout << "Pushing " << pos << " to " << t << std::endl;
+                        }
+                        Delete_in_one_bucket(i, check, i, check, sign);
+                    }
+                    else if (united_verify(i, check, temp_flow_id, temp_fin, tower) == 2)
                     {
                         sign = get_sign(i, (char *)&temp_flow_id, sizeof(uint32_t));
                         // find pure bucket
