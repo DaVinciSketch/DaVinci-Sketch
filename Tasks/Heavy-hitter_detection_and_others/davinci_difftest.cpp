@@ -24,13 +24,14 @@ int main()
     unordered_map<uint32_t, uint32_t> true_freqs[2];
 
     uint32_t init_seed = INIT;
+    double alpha = (double)(600*1024)/(500*1024);
     // sketches[0] = new FLCSketch<bucket_num>(BUCKET_NUM, array_num, entry_num, _fermatcount, _fing, init_seed);
     // sketches[1] = new FLCSketch<bucket_num>(BUCKET_NUM, array_num, entry_num, _fermatcount, _fing, init_seed);
-    unique_ptr<DaVinci<bucket_num>> davinci0 = make_unique<DaVinci<bucket_num>>(500*1024,37800,3200,269400,3,false,813);
-    unique_ptr<DaVinci<bucket_num>> davinci1 = make_unique<DaVinci<bucket_num>>(500*1024,37800,3200,269400,3,false,813);
+    unique_ptr<DaVinci<bucket_num>> davinci0 = make_unique<DaVinci<bucket_num>>(alpha*500*1024,alpha*37800,alpha*3200,alpha*269400,3,false,37);
+    unique_ptr<DaVinci<bucket_num>> davinci1 = make_unique<DaVinci<bucket_num>>(alpha*500*1024,alpha*37800,alpha*3200,alpha*269400,3,false,37);
     // sketches[0] = new DaVinci<bucket_num>();
     // sketches[1] = new DaVinci<bucket_num>();
-    unique_ptr<DaVinci<bucket_num>> flcsketch = make_unique<DaVinci<bucket_num>>(500*1024,37800,3200,269400,3,false,813);
+    unique_ptr<DaVinci<bucket_num>> flcsketch = make_unique<DaVinci<bucket_num>>(alpha*500*1024,alpha*37800,alpha*3200,alpha*269400,3,false,37);
     true_freqs[0].clear();
     true_freqs[1].clear();
 

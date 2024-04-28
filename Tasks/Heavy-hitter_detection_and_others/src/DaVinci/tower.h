@@ -201,6 +201,31 @@ public:
     uint8_t mask1 = 3;
     uint16_t mask2 = 15;
     uint32_t threshold;
+    map<int, vector<uint32_t>> hashcrush_analyse0;
+    map<int, vector<uint32_t>> hashcrush_analyse1;
+    void printHashCrushAnal2File(){
+        ofstream file0("outputs/hashcrush_analyse0.txt");
+        ofstream file1("outputs/hashcrush_analyse1.txt");
+        for(auto it = hashcrush_analyse0.begin(); it != hashcrush_analyse0.end(); it++){
+            int getval = (int)line[0].index(it->first);
+            int sign = getval >> 1 == 1? -1:1;
+            int val = getval & 1 == 1? 1:-1;
+            file0 << it->first << ": " << (int)line[0].index(it->first) << " ";
+            for(auto key: it->second){
+                file0 << key << " ";
+            }
+            file0 << endl;
+        }
+        for(auto it = hashcrush_analyse1.begin(); it != hashcrush_analyse1.end(); it++){
+            file1 << it->first << ": " << (int)line[1].index(it->first) << " ";
+            for(auto key: it->second){
+                file1 << key << " ";
+            }
+            file1 << endl;
+        }
+        file0.close();
+        file1.close();
+    }
     TowerSketch(int w_d, Type _type = CM, uint32_t T = ELE_THRESHOLD, int _init = INIT)
     {
         mem = w_d * 4;
@@ -215,10 +240,11 @@ public:
         }
         hash = new BOBHash32[2];
         hash_sign = new BOBHash32[2];
-        hash[0].initialize(_init);
-        hash[1].initialize(_init + 1);
-        hash_sign[0].initialize(_init + 2);
-        hash_sign[1].initialize(_init + 3);
+        hash[0].initialize(prime_seeds[6]);
+        hash[1].initialize(prime_seeds[0]);
+        cout << "Tower hash1 init seed is " << _init + 1 << endl;
+        hash_sign[0].initialize(prime_seeds[7]);
+        hash_sign[1].initialize(prime_seeds[3]);
         mask2 = T;
         
         cardPrintTowerInfo(mem, mask1, mem/2, mask2, T, _type, maximum);
@@ -256,6 +282,18 @@ public:
         bool flag = false;
         idx[0] = hash[0].run(key, 4) % line[0].width;
         idx[1] = hash[1].run(key, 4) % line[1].width;
+        if(hashcrush_analyse0.find(idx[0]) == hashcrush_analyse0.end()){
+            hashcrush_analyse0[idx[0]] = vector<uint32_t>();
+            hashcrush_analyse0[idx[0]].push_back(*(uint32_t*)key);
+        }else if(std::find(hashcrush_analyse0[idx[0]].begin(), hashcrush_analyse0[idx[0]].end(), *(uint32_t*)key) == hashcrush_analyse0[idx[0]].end()){
+            hashcrush_analyse0[idx[0]].push_back(*(uint32_t*)key);
+        }
+        if(hashcrush_analyse1.find(idx[1]) == hashcrush_analyse1.end()){
+            hashcrush_analyse1[idx[1]] = vector<uint32_t>();
+            hashcrush_analyse1[idx[1]].push_back(*(uint32_t*)key);
+        } else if (std::find(hashcrush_analyse1[idx[1]].begin(), hashcrush_analyse1[idx[1]].end(), *(uint32_t*)key) == hashcrush_analyse1[idx[1]].end()) {
+            hashcrush_analyse1[idx[1]].push_back(*(uint32_t*)key);
+        }
         int sign0 = (hash_sign[0].run(key, 4) & 1) == 1 ? 1 : -1;
         int sign1 = (hash_sign[1].run(key, 4) & 1) == 1 ? 1 : -1;
         int32_t val0 = line[0].index(idx[0]);

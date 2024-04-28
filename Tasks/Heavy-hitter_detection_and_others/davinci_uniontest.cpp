@@ -32,7 +32,7 @@ int main()
     double ave_WMRD = 0.0, ave_entr_RE = 0.0;
     unordered_map<uint32_t, uint32_t> true_freqs[2];
     int test_num = 6;
-    std::ofstream outFile3("./outputs/davinci_union_final_result.csv");
+    std::ofstream outFile3("./outputs/finalresults/davinci_union_final_result.csv");
     outFile3 << "totalMem,fermatMem,heavyBucketNum,towerMem,averageARE\n";
     for(int i=0; i < test_num; i++){
         uint32_t init_seed = INIT;

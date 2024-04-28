@@ -32,6 +32,8 @@ using std::vector;
 #define DATA_ROOT_15s "/data/data" // NUM_TRACE = 1, CAIDA
 #define MY_RANDOM_SEED 813
 
+int prime_seeds[] = {37, 43, 47, 53, 59, 61, 67, 71, 73, 79};
+
 struct SRCIP_TUPLE
 {
   char key[13];
@@ -154,9 +156,66 @@ uint32_t ReadTraces()
   printf("\n\n");
   return total_pck_num;
 }
+uint32_t ReadTwoWindows()
+{
+  double starttime, nowtime;
+  uint32_t total_pck_num = 0;
+  string filename1 = "/home/FLC/ERSketch/datasample/0.dat";
+  // string filename1 = "/home/FLC/ERSketch/datasample/1.dat";
+  // string filename130000 = "../data/130000.dat";
+  char tmp[21] = {0};
+  // FILE *file1 = fopen(filename0.c_str(), "r");
+  FILE *file1 = fopen(filename1.c_str(), "r");
+  if (file1 == NULL)
+  {
+    printf("[ERROR] file not open\n");
+    exit(0);
+  }
+  SRCIP_TUPLE key;
+  int window = 0;
+  if (!fread(tmp, 21, 1, file1)){
+    printf("[ERROR] file error!\n");
+    exit(0);
+  }
+  starttime = *(double *)(tmp + 13);
+  while (fread(tmp, 21, 1, file1))
+  {
+    nowtime = *(double *)(tmp + 13);
+    if (nowtime - starttime >= 5.0)
+    {
+      cout << "Cumulated packets: " << total_pck_num << endl;
+      window++;
+      starttime = nowtime;
+    }
+    memcpy(&key, tmp, 4);
+    traces[window].push_back(key);
+    total_pck_num++;
+  }
+  window++;
+  cout << "total_packet_num: " << total_pck_num << endl;
+  cout << "window" << window <<endl;
+  printf("[INFO] 12 windows scanned, packets number:\n");
+  int cur_index = 0;
+  for(int i = 1; i < window; i++){
+    int cur_num = traces[i].size();
+    for(int j = 0; j < cur_num; j++){
+      key = traces[i][j];
+      traces[cur_index].push_back(key);
+      if(traces[cur_index].size() >= total_pck_num/2){
+        cur_index++;
+      }
+    }
+  } 
+  for (int i = 0; i < window; i++)
+    printf("[INFO] window %02d has %ld packets\n", i, traces[i].size());
+  printf("\n\n");
+  return total_pck_num;
+}
 /************************** PREDEFINED NUMBERS***********************/
 #define HH_THRESHOLD 500 // 20,000,000 * 0.0005 (0.05%)
 #define HC_THRESHOLD 250
+// #define HC_THRESHOLD 200
+// #define HC_THRESHOLD 20
 #define TOT_MEM 500
 /************************** COMMON FUNCTIONS*************************/
 #define ROUND_2_INT(f) ((int)(f >= 0.0 ? (f + 0.5) : (f - 0.5)))

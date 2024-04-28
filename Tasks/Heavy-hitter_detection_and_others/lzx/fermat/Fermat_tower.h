@@ -5,6 +5,7 @@
 #include "../Common/EMFSD1.h"
 #include "../common_func.h"
 using namespace std;
+
 class Fermat_tower
 {
 public:
@@ -33,7 +34,6 @@ public:
         if(!towerfilter->insert(key)){
             fermatEle->Insert(*(uint32_t*) key, f);
             EleFermatInserted[*(uint32_t*) key] ++;
-            //cout<<"ele"<<endl;
         }
         tot_packets++;
     }
@@ -45,7 +45,6 @@ public:
         for (int i = 0; i < this->towerfilter->line[1].width; i++)
         {
             countercpy[i] = towerfilter->line[1].index(i);
-            //cout << countercpy[i]<<endl;
         }
         em->set_counters(this->towerfilter->line[1].width, countercpy, 65535);
         for (int i = 0; i < FERMAT_EM_ITER; i++)
@@ -53,8 +52,6 @@ public:
             printf("%d_epoch\n", i);
             em->next_epoch();
         }
-        // printf("%ld\n", em->ns.size());
-        // fflush(stdout);
         ed.resize(em->ns.size());
         for (int i = 1; i < em->ns.size(); i++)
         {
@@ -116,8 +113,7 @@ public:
             printf("ele decode ok\n");
         printf("Eleresult: %lu\n", Eleresult.size());
         printf("Ele Fermat Inserted: %lu\n", EleFermatInserted.size());
-        if(EleFermatInserted.size())
-            cout << "Decoded Rate: " << Eleresult.size()/EleFermatInserted.size() <<endl;
+        cout << "Decoded Rate: " << Eleresult.size()/EleFermatInserted.size() <<endl;
         
 
     }
@@ -152,5 +148,86 @@ public:
             if (query((const char *)&i.first) >= HH_THRESHOLD)
                 hh.insert(i.first);
         }
+    }
+    void diff(Fermat_tower &sketch2)
+    {
+        std::ofstream outfile1("./outputs/diff_f0.csv");
+        std::ofstream outfile2("./outputs/diff_f1.csv");
+        std::ofstream outfile3("./outputs/diff_f.csv");
+        int array_num = fermatEle->getArrayNum();
+        int entry_num = fermatEle->getEntryNum();
+
+        Fermat::IdCountArrays Arrays1 = fermatEle->getArrays();  // 获取 id 和 count 两个数组
+        uint32_t** idArray1 = Arrays1.idArray;
+        uint32_t** countArray1 = Arrays1.countArray;
+
+        Fermat::IdCountArrays Arrays2 = sketch2.fermatEle->getArrays();
+
+        outfile1 << "id,count" << endl;
+        outfile2 << "id,count" << endl;
+        outfile3 << "id,count" << endl;
+        cout << "PRIME_ID: " << PRIME_ID << endl;
+
+        for (int i = 0; i < array_num; i++)
+        {
+            for (int j = 0; j < entry_num; j++)
+            {
+                outfile1 << idArray1[i][j] << "," << countArray1[i][j] << endl;
+                outfile2 << Arrays2.idArray[i][j] << "," << Arrays2.countArray[i][j] << endl;
+                Arrays2.idArray[i][j] = (PRIME_ID + idArray1[i][j] - Arrays2.idArray[i][j]) % PRIME_ID;
+                Arrays2.countArray[i][j] = countArray1[i][j] - Arrays2.countArray[i][j];
+                //sketch2.fermatEle->Insert(Arrays2.idArray[i][j], Arrays2.countArray[i][j]);
+                EleFermatInserted[Arrays2.idArray[i][j]] ++;
+                tot_packets++;
+            }
+        }
+        sketch2.fermatEle->setArray(Arrays2);
+        Fermat::IdCountArrays Arrays3 = sketch2.fermatEle->getArrays();
+        for (int i = 0; i < array_num; i++)
+        {
+            for (int j = 0; j < entry_num; j++)
+            {
+                outfile3 << Arrays3.idArray[i][j] << "," << Arrays3.countArray[i][j] << endl;
+            }
+        }
+    }
+    void Union(Fermat_tower &sketch2)
+    {     
+        // std::ofstream outfile1("us0.csv");
+        // std::ofstream outfile2("us1.csv");
+        // std::ofstream outfile3("u.csv");
+        int array_num = fermatEle->getArrayNum();
+        int entry_num = fermatEle->getEntryNum();
+
+        Fermat::IdCountArrays Arrays1 = fermatEle->getArrays();  // 获取 id 和 count 两个数组
+        uint32_t** idArray1 = Arrays1.idArray;
+        uint32_t** countArray1 = Arrays1.countArray;
+
+        Fermat::IdCountArrays Arrays2 = sketch2.fermatEle->getArrays();  // 获取 id 和 count 两个数组
+
+        // outfile1 << "id,count" << endl;
+        // outfile2 << "id,count" << endl;
+        // outfile3 << "id,count" << endl;
+        // cout << "PRIME_ID: " << PRIME_ID << endl;
+
+        for (int i = 0; i < array_num; i++)
+        {
+            for (int j = 0; j < entry_num; j++)
+            {
+                // outfile1 << idArray1[i][j] << "," << countArray1[i][j] << endl;
+                // outfile2 << Arrays2.idArray[i][j] << "," << Arrays2.countArray[i][j] << endl;
+                Arrays2.idArray[i][j] = (idArray1[i][j] + Arrays2.idArray[i][j]) % PRIME_ID;
+                Arrays2.countArray[i][j] += countArray1[i][j];
+            }
+        }
+        sketch2.fermatEle->setArray(Arrays2);
+        // Fermat::IdCountArrays Arrays3 = sketch2.fermatEle->getArrays();
+        // for (int i = 0; i < array_num; i++)
+        // {
+        //     for (int j = 0; j < entry_num; j++)
+        //     {
+        //         outfile3 << Arrays3.idArray[i][j] << "," << Arrays3.countArray[i][j] << endl;
+        //     }
+        // }
     }
 };

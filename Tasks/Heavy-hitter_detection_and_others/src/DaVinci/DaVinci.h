@@ -1,6 +1,7 @@
 #pragma once
 #include <map>
 #include "HeavyPart.h"
+#include "common/EMFSD1.h"
 #include "common/EMFSD.h"
 #include "tower.h"
 #include "fermat.h"
@@ -55,12 +56,13 @@ class DaVinci
     int light_array_num;
     int light_entry_num;
 public:
+    bool have_decoded = false;
     int tot_memory;
     int tot_packets;
     int fermatEleMem;
     int towerfilterMem;
     bool ifFermatCount;
-    EMFSD *em_fsd_algos = NULL;
+    EMFSD1 *em_tower = NULL;
 
     int heavy_mem = _bucket_num * COUNTER_PER_BUCKET * 8; //this is fake, only to satisfy "template" but not really used
     int heavy_bucket_num; // This is real
@@ -72,6 +74,7 @@ public:
 
     //for test track
     unordered_map<int32_t, int> Eleresult;
+    unordered_map<int32_t, int> allResult;
     unordered_map<int32_t, vector<pair<int, int>>> insert_tracking;
 
     unordered_map<int32_t, vector<int>> decode_track;
@@ -83,7 +86,7 @@ public:
 
     DaVinci(int _tot_memory = TOT_MEMORY, int _fermatEleMem = 3 * 2 * ELE_BUCKET * (6 + 4 * USE_FING) , int _heavypartBucketNum = 0.8*BUCKET_NUM_, 
         int _towerMem = TOT_MEMORY - 3 * 2 * ELE_BUCKET * (6 + 4 * USE_FING) - 0.8*HEAVY_MEM_, int _fermatcount = 3, 
-                 bool usefing = USE_FING, uint32_t _init = 813, bool union_task = 0) : fermatEleMem(_fermatEleMem)
+                 bool usefing = USE_FING, uint32_t _init = 37, bool union_task = 0, int towertype = CM) : fermatEleMem(_fermatEleMem)
     {
         printf("You are running DaVinci initiated by memory.\n");
         printf("parameters: _heavypartBucketNum = %d, _towerMem = %d, _fermatEleMem = %d, _fermatcount = %d, usefing = %d, _init = %d\n", _heavypartBucketNum, _towerMem, _fermatEleMem, _fermatcount, usefing, _init);
@@ -211,29 +214,65 @@ public:
         tot_packets++;
     }
 
-    void get_distribution(vector<double> &dist, int index = 0) {
-        em_fsd_algos = new EMFSD[light_array_num];
-        int32_t **counters;
-        fermatEle->cpy_counters_to_pos(&counters);
+    void get_distribution(vector<double> &dist, int index = 0) { //need decoed first
 
-        em_fsd_algos[index].set_counters(light_entry_num, (uint32_t*)counters[index]);
-        int times = 10;
-        while(times--) {
-            em_fsd_algos[index].next_epoch();
+        em_tower = new EMFSD1;
+        uint32_t *countercpy;
+        countercpy = new uint32_t[tower->line[1].width];
+        for (int i = 0; i < this->tower->line[1].width; i++)
+        {
+            countercpy[i] = tower->line[1].index(i);
+            //cout << countercpy[i]<<endl;
+        }
+        em_tower->set_counters(this->tower->line[1].width, countercpy, 15);
+        for (int i = 0; i < FERMAT_EM_ITER; i++)
+        {
+            // printf("%d_epoch\n", i);
+            em_tower->next_epoch();
+        }
+        dist.resize(em_tower->ns.size());
+        for (int i = 1; i < em_tower->ns.size(); i++)
+        {
+            dist[i] = em_tower->ns[i];
+            // cout << i << " -> " << dist[i] << endl;
         }
 
-        dist = em_fsd_algos[index].ns;
+        for(auto i : Eleresult){
+            if(dist.size() <= abs(i.second)+15){
+                // cout << "dist.size() = " << dist.size() << ", i.second+15 = " << abs(i.second)+15 << endl;
+                dist.resize(abs(i.second) + 16);
+
+            }
+            dist[abs(i.second)+15]++;
+            if(dist[15])
+                dist[15]-=1;
+        }
+
+        // em_fsd_algos = new EMFSD[light_array_num];
+        // int32_t **counters;
+        // fermatEle->cpy_counters_to_pos(&counters);
+
+        // em_fsd_algos[index].set_counters(light_entry_num, (uint32_t*)counters[index]);
+        // int times = 10;
+        // while(times--) {
+        //     em_fsd_algos[index].next_epoch();
+        // }
         
         for(int i = 0; i < heavy_bucket_num; ++i)
             for(int j = 0; j < MAX_VALID_COUNTER; ++j) {
                 uint8_t key[KEY_LENGTH_4];
                 *(uint32_t*)key = heavy_part->buckets[i].key[j];
                 int val = heavy_part->buckets[i].val[j];
-
-                int ex_val = fermatEle->query_array((char*)key, index); //TODO:
-                if(HIGHEST_BIT_IS_1(val) && ex_val != 0) {
-                    val += ex_val;
-                    dist[ex_val]--;
+                int tower_val = 0;
+                int fermat_val = 0;
+                if(HIGHEST_BIT_IS_1(val)){
+                    tower_val = tower->query((char*)key);
+                    if(Eleresult.count(*(uint32_t*)key))
+                        fermat_val = Eleresult[*(uint32_t*)key];
+                }
+                if(HIGHEST_BIT_IS_1(val) && fermat_val + tower_val != 0) {
+                    val += (fermat_val + tower_val);
+                    dist[fermat_val + tower_val]--;
                 }
                 val = GetCounterVal(val);
                 if(val) {
@@ -243,8 +282,7 @@ public:
                 }
             }
         
-        delete[] em_fsd_algos;
-        delete[] counters;
+        delete countercpy;
     }
     int decode(bool use_united = 0)
     {
@@ -278,7 +316,7 @@ public:
     }
     uint32_t query(const char *key, bool add_undecoded = 1, bool ifprint = 0)
     {
-        uint32_t checking_id = 3057151099;
+        uint32_t checking_id = 0;
         uint32_t hp_cnt = heavy_part->query((uint8_t *)key);
         uint32_t id = *(uint32_t*) key;
         uint32_t checked_id = 0;
@@ -363,7 +401,7 @@ public:
         decode_track[*(uint32_t *)key] = vector<int>{(int)GetCounterVal(hp_cnt), 0, 0};
         return 0;
     }
-    double get_entropy(vector<double> &distribution)
+    double get_entropy(vector<double> &distribution) //Must be used after get_distribution
     {
         double entropy = 0.0;
         double tot = 0.0;
@@ -377,13 +415,6 @@ public:
         }
         entropy = -entr / tot + log2(tot);
         return entropy;
-    }
-    void get_heavy_hitters(set<uint32_t> &hh){
-        for (auto i : Eleresult)
-        {
-            if (query((const char *)&i.first) >= HH_THRESHOLD)
-                hh.insert(i.first);
-        }
     }
 
     int get_heavy_bucket_num(){
@@ -455,6 +486,65 @@ public:
         }
         fclose(fp2);
         return true;
+    }
+
+    void get_all_results(){ //Must be used after decoding
+        for(int i = 0; i < heavy_bucket_num; i++){
+            for(int j = 0; j < MAX_VALID_COUNTER; j++){
+                if(heavy_part->buckets[i].key[j] != 0){
+                    if(allResult.count(heavy_part->buckets[i].key[j]) == 0){
+                        allResult[heavy_part->buckets[i].key[j]] = GetCounterVal(heavy_part->buckets[i].val[j]);
+                        if(HIGHEST_BIT_IS_1(heavy_part->buckets[i].val[j])){
+                            int tower_est = tower->query((const char *)&heavy_part->buckets[i].key[j]);
+                            if(tower_est == 15 && Eleresult.count(heavy_part->buckets[i].key[j]) > 0){
+                                allResult[heavy_part->buckets[i].key[j]] += Eleresult[heavy_part->buckets[i].key[j]] + tower_est;
+                            }
+                            else{
+                                allResult[heavy_part->buckets[i].key[j]] += tower_est;
+                            }
+                        }
+                    }
+                    else{
+                        assert(0);
+                    }
+                }
+            }
+        }
+
+        for(auto i:Eleresult){
+            if(allResult.count(i.first) == 0){
+                allResult[i.first] = i.second + 15;
+            }
+        }
+    }
+
+
+    void get_heavy_hitters(set<uint32_t> &hh){
+        get_all_results();
+        for (auto i : allResult)
+        {
+            if (i.second >= HH_THRESHOLD)
+                hh.insert(i.first);
+        }
+    }
+
+    int get_cardinality(){
+        int card = tower->get_cardinality();
+        for(int i = 0; i < heavy_bucket_num; ++i)
+            for(int j = 0; j < MAX_VALID_COUNTER; ++j)
+            {
+                uint8_t key[KEY_LENGTH_4];
+                *(uint32_t*)key = heavy_part->buckets[i].key[j];
+                int val = heavy_part->buckets[i].val[j];
+
+                if(HIGHEST_BIT_IS_1(val))
+                {
+                    card--;
+                }
+                if(GetCounterVal(val))
+                    card++;
+            }
+        return card;
     }
 
     ~DaVinci()
@@ -864,23 +954,39 @@ long double InnerProduct(DaVinci<bucket_num>& sketch1, DaVinci<bucket_num>& sket
 
     // lightXlight
     std::cout << "array_num: " << array_num << ", entry_num: " << entry_num << std::endl;
-    if(enable_fast){
+    // if(enable_fast)
+    {
         for (int i = 0; i < array_num; i++)
         {
             long double k = 0;
             for (int j = 0; j < entry_num; j++)
                 k += 1ll * sketch1.fermatEle->get_counter(i, j) * sketch2.fermatEle->get_counter(i, j);
-            res[i] = 1.0 * k / entry_num; //TODO: check if this is correct
+            res[i] = 1.0 * k;// / entry_num; //TODO: check if this is correct
         }
         long double re = 0;
         for (int i = 0; i < array_num; i++)
             re += res[i];
         innerProduct_light = 1.0 * re / array_num;
     }
-    std::cout << "Inner product with only light part involved is " << innerProduct_light << std::endl;
-    sketch1.decode();
-    sketch2.decode();
+    int width = sketch1.tower->line[1].width;
+    for(int i = 0; i < width; ++i){
+        innerProduct_tower += 1ll * sketch1.tower->line[1].index(i) * sketch2.tower->line[1].index(i);
+        // cout << "TowerXtower: " << i << "th index, " << sketch1.tower->line[1].index(i) << " * " << sketch2.tower->line[1].index(i) << " = " << 1ll * sketch1.tower->line[1].index(i) * sketch2.tower->line[1].index(i) << endl;
+        innerProduct_tower_light += 1ll * sketch1.tower->line[1].index(i) * sketch2.fermatEle->get_counter(0, i%entry_num);
+        // cout << "TowerXlight: " << i << "th index, " << sketch1.tower->line[1].index(i) << " * " << sketch2.fermatEle->get_counter(0, i%entry_num) << " = " << 1ll * sketch1.tower->line[1].index(i) * sketch2.fermatEle->get_counter(0, i%entry_num) << endl;
+        innerProduct_light_tower += 1ll * sketch1.fermatEle->get_counter(0, i%entry_num) * sketch2.tower->line[1].index(i);
+    }
+    std::cout << "Fast inner product with only light part involved is " << innerProduct_light << std::endl;
+    if(sketch1.have_decoded == 0){
+        sketch1.decode(1);
+        sketch1.have_decoded = 1;
+    }
+    if(sketch2.have_decoded == 0){
+        sketch2.decode(1);
+        sketch2.have_decoded = 1;
+    }
     if(!enable_fast){
+        innerProduct_light = 0;
         cout << "Not using fast mode!" << endl;
         for(auto k:sketch2.Eleresult){
             uint32_t key = k.first;
@@ -892,13 +998,10 @@ long double InnerProduct(DaVinci<bucket_num>& sketch1, DaVinci<bucket_num>& sket
                 innerProduct_light += sketch1.Eleresult[key] * val;
             }
         }
+        std::cout << "Slow inner product with only light part involved is " << innerProduct_light << std::endl;
     }
 
-    // towerXlight
-    int width = sketch1.tower->line[1].width;
-    for(int i = 0; i < array_num; ++i){
-        
-    }
+    // towerXtower, towerXlight, lightXtower
     // lightXtower
     // std::cout << "Start to involve heavy part!" << std::endl;
     // sketch1.write2file("Start_involve_heavy_in_innerp.txt");
@@ -939,6 +1042,10 @@ long double InnerProduct(DaVinci<bucket_num>& sketch1, DaVinci<bucket_num>& sket
                     lightValEst = 0;
                 int32_t lightValWithDecoding = sketch2.query_only_light_part((char*)&key);
                 innerProduct_heavy_light += val * lightValEst;
+
+                //heavyXtower
+                innerProduct_heavy_tower += val * sketch2.tower->query((char*)&key);
+
                 // if(lightValEst != lightValWithDecoding)
                     outFile << key << ", heavy, light, " << val << ", " << lightValEst << ", " << val << ", " << lightValWithDecoding << ", " << val * lightValEst << ", " << (int)val * lightValWithDecoding << endl;
             }
@@ -968,6 +1075,9 @@ long double InnerProduct(DaVinci<bucket_num>& sketch1, DaVinci<bucket_num>& sket
                     lightValEst = 0;
                 int32_t lightValWithDecoding = sketch1.query_only_light_part((char*)&key);
                 innerProduct_light_heavy += val * lightValEst;
+
+                //towerXheavy
+                innerProduct_tower_heavy += sketch1.tower->query((char*)&key) * val;
                 // if(lightValEst != lightValWithDecoding)
                     outFile << key << ", light, heavy, " << lightValEst << ", " << val << ", " << lightValWithDecoding << "," << val << ", " << val * lightValEst << ", " << (int)val * lightValWithDecoding << endl;
             }
@@ -975,12 +1085,17 @@ long double InnerProduct(DaVinci<bucket_num>& sketch1, DaVinci<bucket_num>& sket
 
     }
 
-    innerProduct = innerProduct_light + innerProduct_heavy + innerProduct_light_heavy + innerProduct_heavy_light;
+    innerProduct = innerProduct_light + innerProduct_heavy + innerProduct_light_heavy + innerProduct_heavy_light + innerProduct_heavy_tower + innerProduct_tower_heavy + innerProduct_light_tower + innerProduct_tower_light + innerProduct_tower;
 
+    cout << "Inner product with only heavy part involved is " << innerProduct_heavy << endl;
+    cout << "Inner product with only tower part involved is " << innerProduct_tower << endl;
     cout << "Inner product with only light part involved is " << innerProduct_light << endl;
     cout << "Inner product with 1 heavy part and 2 light part involved is " << innerProduct_heavy_light << endl;
     cout << "Inner product with 1 light part and 2 heavy part involved is " << innerProduct_light_heavy << endl;
-    cout << "Inner product with only heavy part involved is " << innerProduct_heavy << endl;
+    cout << "Inner product with 1 heavy part and 2 tower part involved is " << innerProduct_heavy_tower << endl;
+    cout << "Inner product with 1 tower part and 2 heavy part involved is " << innerProduct_tower_heavy << endl;
+    cout << "Inner product with 1 light part and 2 tower part involved is " << innerProduct_light_tower << endl;
+    cout << "Inner product with 1 tower part and 2 light part involved is " << innerProduct_tower_light << endl;
     cout << "Total inner product is " << innerProduct << endl;
     outFile.close();
     return innerProduct;

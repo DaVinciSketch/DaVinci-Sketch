@@ -51,14 +51,26 @@ test: ./test.cpp
 
 davinci: ./davinci.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp
 	g++ -O2 -o ./build/davinci.out ./davinci.cpp ./src/DaVinci/HeavyPart.cpp $(CPPTYPE) ./src/DaVinci/common/BOBHash32.cpp
+davinci_all_tests: ./davinci_all_tests.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp
+	g++ -O3 -o ./build/davinci_all_tests.out ./davinci_all_tests.cpp ./src/DaVinci/HeavyPart.cpp $(CPPTYPE) ./src/DaVinci/common/BOBHash32.cpp
 find_best_davinci: ./find_best_davinci.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp
 	g++ -g -pthread -O2 -o ./build/find_best_davinci.out ./find_best_davinci.cpp ./src/DaVinci/HeavyPart.cpp $(CPPTYPE) ./src/DaVinci/common/BOBHash32.cpp
+find_best_davinci_hh: ./find_best_davinci_hh.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp
+	g++ -g -pthread -O2 -o ./build/find_best_davinci_hh.out ./find_best_davinci_hh.cpp ./src/DaVinci/HeavyPart.cpp $(CPPTYPE) ./src/DaVinci/common/BOBHash32.cpp
 davinci_uniontest: ./davinci_uniontest.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp
 	g++ -O2 -o ./build/davinci_uniontest.out ./davinci_uniontest.cpp ./src/DaVinci/HeavyPart.cpp $(CPPTYPE) ./src/DaVinci/common/BOBHash32.cpp
 davinci_difftest: ./davinci_difftest.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp
 	g++ -O2 -o ./build/davinci_difftest.out ./davinci_difftest.cpp ./src/DaVinci/HeavyPart.cpp $(CPPTYPE) ./src/DaVinci/common/BOBHash32.cpp
 davinci_innerproducttest: ./davinci_innerproducttest.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp
-	g++ -O2 -o ./build/davinci_innerproducttest.out ./davinci_innerproducttest.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp $(CPPTYPE)
+	g++ -g -O2 -o ./build/davinci_innerproducttest.out ./davinci_innerproducttest.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp $(CPPTYPE)
+davinci_distribution: ./davinci_distribution.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp
+	g++ -g -O2 -o ./build/davinci_distribution.out ./davinci_distribution.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp $(CPPTYPE)
+davinci_cardinality: ./davinci_cardinality.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp
+	g++ -g -O2 -o ./build/davinci_cardinality.out ./davinci_cardinality.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp $(CPPTYPE)
+davinci_entropy: ./davinci_entropy.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp
+	g++ -g -O2 -o ./build/davinci_entropy.out ./davinci_entropy.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp $(CPPTYPE)
+davinci_hc: ./davinci_hc.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp
+	g++ -g -O2 -o ./build/davinci_hc.out ./davinci_hc.cpp ./src/DaVinci/HeavyPart.cpp ./src/DaVinci/common/BOBHash32.cpp $(CPPTYPE)
 
 
 clean:

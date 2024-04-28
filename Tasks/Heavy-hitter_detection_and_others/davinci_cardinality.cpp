@@ -26,7 +26,7 @@ int main()
     // int fermatMemList[] = {1800, 3600, 5400, 7200, 9000, 10800};
     // int heavyBucketNumList[] = {400, 800, 1200, 1600, 2000, 2400};
     // int towerMemList[] = {75000, 150000, 225000, 300000, 375000, 450000};
-    int totalMem[] = {100*1024, 200*1024, 300*1024, 400*1024, 500*1024, 600*1024};
+    int totalMem[] = {200*1024, 300*1024, 400*1024, 500*1024, 600*1024};
     int num_pkt = (int)traces[0].size();
     for (int i = 0; i < num_pkt; ++i)
     {
@@ -49,13 +49,14 @@ int main()
     int singletest_heavy_bucket_num = 3100;
     int singletest_tower_mem = 512000 - singletest_fermat_mem - singletest_heavy_bucket_num*64;
     
-    std::ofstream outFile("./outputs/finalresults/davinci_dist_final_result.csv", std::ios::app);
-    outFile << "index, totalMem, fermatMem, heavyBucketNum, towerMem, WMRD\n";
-    for (int fermat_mem_base = 64000; fermat_mem_base <= 500 * 1024; fermat_mem_base += 10000)
+    std::ofstream outFile("./outputs/finalresults/davinci_card_final_result.csv", std::ios::app);
+    outFile << "index, totalMem, fermatMem, heavyBucketNum, towerMem, RE\n";
+    for (int fermat_mem_base = 10000; fermat_mem_base <= 500 * 1024; fermat_mem_base += 10000)
     {
         for (int heavy_bucket_num_base = 1000; heavy_bucket_num_base * 64 <= 500 * 1024 - fermat_mem_base; heavy_bucket_num_base += 100)
         {
-            for (int index_ = 0; index_ < 6; index_++)
+            double totalsum = 0;
+            for (int index_ = 0; index_ < 5; index_++)
             {
                 int cur_total_mem = totalMem[index_]; 
                 double cur_alpha = (double)cur_total_mem / (500*1024);
@@ -87,83 +88,22 @@ int main()
                     davinci->insert((const char *)(traces[traceindex][i].key), 1);
                 }
                 printf("Insertion finished\n");
-                // printf("Sizes: %d, %d\n", true_freq.size(), true_freqs[1].size());
-
-                davinci->decode(1);
-
-                vector<double> dist(10, 0); //[array_num];
-
-                cout << "Entering get_distribution" << endl;
-                davinci->get_distribution(dist, 0);
-                cout << "Exiting get_distribution" << endl;
-
-                // std::ofstream outFile("./outputs/dist_result_compare_array" + std::to_string(index_) + ".csv");
-                // outFile << "Num, EstVal, RealVal" << std::endl;
-                int minnum = std::min(dist.size(), real_distribution.size());
-                long double are = 0;
-                for (int i = 0; i < minnum; ++i)
-                {
-                    // outFile << i << ", " << dist[i] << ", " << real_distribution[i] << std::endl;
-                    if (real_distribution[i] != 0)
-                        are += std::abs(dist[i] - real_distribution[i]) / real_distribution[i];
-                    else
-                        are += dist[i];
-                }
-                // if(dist.size() > real_distribution.size())
-                // {
-                //     for(int i = minnum; i < dist.size(); ++i)
-                //     {
-                //         outFile << i << ", " << dist[i] << ", 0" << std::endl;
-                //     }
-                //     // cout << "dist.size() > real_distribution.size() by " << dist.size() - real_distribution.size() << " elements" << endl;
-                // }
-                // else if(dist.size() < real_distribution.size())
-                // {
-                //     for(int i = minnum; i < real_distribution.size(); ++i)
-                //     {
-                //         outFile << i << ", 0, " << real_distribution[i] << std::endl;
-                //     }
-                //     // cout << "dist.size() < real_distribution.size() by " << real_distribution.size() - dist.size() << " elements" << endl;
-                // }
-
-                // outFile.close();
-                cout << index << "th array ARE: " << are / minnum << endl;
-
-                // compute WMRD
-                double WMRD = 0;
-                double WMRD_nom = 0;
-                double WMRD_denom = 0;
-                printf("get ok\n");
-                fflush(stdout);
-                if (real_distribution.size() > dist.size())
-                    dist.resize(real_distribution.size());
-                for (int i = 1; i < real_distribution.size(); ++i)
-                {
-                    if (real_distribution[i] == 0)
-                    {
-                        continue;
-                    }
-                    // printf("[%d] <%6d, %6d>\n", i, true_dist[i], (int)dist[i]);
-                    WMRD_nom += std::abs(real_distribution[i] - dist[i]);
-                    WMRD_denom += double(real_distribution[i] + dist[i]) / 2;
-                }
-                WMRD = WMRD_nom / WMRD_denom;
-                if(minwmrd > WMRD)
-                {
-                    minwmrd = WMRD;
-                    minindex = index;
-                }
-
-                printf("WMRD : %3.5f\n", WMRD);
-                fflush(stdout);
-                outFile << (index++) << ", " << cur_total_mem << ", " << cur_fermat_mem << ", " << cur_heavy_bucket_num << ", " << cur_tower_mem << "," << WMRD << "\n";
+                int card = davinci->get_cardinality();
+                double card_err = abs(card - int(true_freq.size())) / double(true_freq.size());
+                printf("RE of cardinality : %2.6f (est=%8.0d, true=%8.0d)\n", card_err, card, (int)true_freq.size());
+                totalsum += card_err;
+                outFile << (index++) << ", " << cur_total_mem << ", " << cur_fermat_mem << ", " << cur_heavy_bucket_num << ", " << cur_tower_mem << "," << card_err << "\n";
                 if(singletest){
                     return 0;
                 }
             }
+            if(totalsum < minwmrd){
+                minwmrd = totalsum;
+                minindex = index;
+            }
         }
     }
-    outFile << "minwmrd, " << minwmrd << ", minindex, " << minindex << "\n";
+    outFile << "minre, " << minwmrd << ", minindex, " << minindex << "\n";
     outFile.close();
 
     // // entropy initialization

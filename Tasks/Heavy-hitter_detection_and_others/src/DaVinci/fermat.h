@@ -117,7 +117,9 @@ public:
         return -1;
     }
 
-    virtual ~Fermat() {};
+    virtual ~Fermat() {
+        cout << "Fermat destructor is called!" << endl;
+    };
 };
 class Fermat_Sketch : public Fermat
 {
@@ -198,11 +200,11 @@ public:
         create_array();
         // hash
         if (use_fing)
-            hash_fp = new BOBHash32(_init);
+            hash_fp = new BOBHash32(prime_seeds[0]);
         hash = new BOBHash32[array_num];
         for (int i = 0; i < array_num; ++i)
         {
-            hash[i].initialize(_init + (10 * i) + 1);
+            hash[i].initialize(prime_seeds[i]);
         }
     }
 
@@ -218,10 +220,10 @@ public:
 
         // hash
         if (use_fing)
-            hash_fp = new BOBHash32(_init);
+            hash_fp = new BOBHash32(prime_seeds[0]);
         hash = new BOBHash32[array_num];
         for (int i = 0; i < array_num; ++i)
-            hash[i].initialize(_init + i + 1);
+            hash[i].initialize(prime_seeds[i]);
     }
 
     ~Fermat_Sketch() override
@@ -1841,8 +1843,8 @@ public:
         
         for (int i = 0; i < array_num; ++i)
         {
-            hash[i].initialize(_init + (10 * i) + 1);
-            hash_sign[i].initialize(_init + (17 * i) + 1);
+            hash[i].initialize(prime_seeds[i]);
+            hash_sign[i].initialize(prime_seeds[i+3]);
         }
     }
 
@@ -1863,8 +1865,8 @@ public:
         hash_sign = new BOBHash32[array_num];
         for (int i = 0; i < array_num; ++i){
 
-            hash[i].initialize(_init + i + 1);
-            hash_sign[i].initialize(_init + (17 * i) + 1);
+            hash[i].initialize(prime_seeds[i]);
+            hash_sign[i].initialize(prime_seeds[i+3]);
         }
 
         cout << "Finish initiating Fermat_Count_IDP_CNTPM_48bits with memory = " << _memory << " array_num = " << array_num << " entry_num = " << entry_num << endl;
@@ -2095,14 +2097,14 @@ public:
         returnflag = 1;
 verify_return:
 
-        if(tower->query_if_overflow((char *)&flow_id) && returnflag == 0){
-            cout << "[[[[[[[[[[[[[Cnt_value = " << cnt_value << " id_value = " << id_value << " temp = " << temp << " flow_id = " << flow_id << endl;
-            cout << "[[[[[[[[[[[[[Tower overflow said yes! But verify value is " << returnflag << endl;
-        }
-        else if(!tower->query_if_overflow((char *)&flow_id) && returnflag != 0){
-            cout << "[[[[[[[[[[[[[Cnt_value = " << cnt_value << " id_value = " << id_value << " temp = " << temp << " flow_id = " << flow_id << endl;
-            cout << "[[[[[[[[[[[[[Tower overflow said no! But verify value is " << returnflag << endl;
-        }
+        // if(tower->query_if_overflow((char *)&flow_id) && returnflag == 0){
+        //     cout << "[[[[[[[[[[[[[Cnt_value = " << cnt_value << " id_value = " << id_value << " temp = " << temp << " flow_id = " << flow_id << endl;
+        //     cout << "[[[[[[[[[[[[[Tower overflow said yes! But verify value is " << returnflag << endl;
+        // }
+        // else if(!tower->query_if_overflow((char *)&flow_id) && returnflag != 0){
+        //     cout << "[[[[[[[[[[[[[Cnt_value = " << cnt_value << " id_value = " << id_value << " temp = " << temp << " flow_id = " << flow_id << endl;
+        //     cout << "[[[[[[[[[[[[[Tower overflow said no! But verify value is " << returnflag << endl;
+        // }
 
         return returnflag;
     }
