@@ -43,21 +43,52 @@ int main()
     int num_pkt = (int)traces[traceindex].size();
     printf("num_pkt: %d\n", num_pkt);
     int num1, num2 = 0;
+    // for (int i = 0; i < num_pkt; ++i)
+    // {
+    //     // if(i%10!=0){
+    //         ++true_freqs[0][*((uint32_t *)(traces[traceindex][i].key))];
+    //         num1++;
+    //         davinci0->insert((const char *)(traces[traceindex][i].key), 1);
+    //     // }
+    //     // else
+    //     if(i%2==0)
+    //     {
+    //         ++true_freqs[1][*((uint32_t *)(traces[traceindex][i].key))];
+    //         num2++;
+    //         davinci1->insert((const char *)(traces[traceindex][i].key), 1);
+    //     }
+    // }
+    // for (int i = 0; i < num_pkt; ++i)
+    // {
+    //     if(i%2!=0){
+    //         ++true_freqs[0][*((uint32_t *)(traces[traceindex][i].key))];
+    //         num1++;
+    //         davinci0->insert((const char *)(traces[traceindex][i].key), 1);
+    //     }
+    //     // else
+    //     if(i%2==0)
+    //     {
+    //         ++true_freqs[1][*((uint32_t *)(traces[traceindex][i].key))];
+    //         num2++;
+    //         davinci1->insert((const char *)(traces[traceindex][i].key), 1);
+    //     }
+    // }
     for (int i = 0; i < num_pkt; ++i)
     {
-        // if(i%10!=0){
+        if(i <= num_pkt*2/3){
             ++true_freqs[0][*((uint32_t *)(traces[traceindex][i].key))];
             num1++;
             davinci0->insert((const char *)(traces[traceindex][i].key), 1);
-        // }
+        }
         // else
-        if(i%2==0)
+        if(i > num_pkt*1/3)
         {
             ++true_freqs[1][*((uint32_t *)(traces[traceindex][i].key))];
             num2++;
             davinci1->insert((const char *)(traces[traceindex][i].key), 1);
         }
     }
+    cout << "num1: " << num1 << ", num2: " << num2 << endl;
     printf("Insertion finished\n");
     printf("Sizes: %d, %d\n", true_freqs[0].size(), true_freqs[1].size());
 

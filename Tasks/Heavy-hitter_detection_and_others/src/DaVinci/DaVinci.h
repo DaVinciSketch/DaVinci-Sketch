@@ -57,6 +57,7 @@ class DaVinci
     int light_entry_num;
 public:
     bool have_decoded = false;
+    bool have_got_all_result = false;
     int tot_memory;
     int tot_packets;
     int fermatEleMem;
@@ -110,9 +111,9 @@ public:
         }
         heavy_part = new HeavyPart<bucket_num>(_heavypartBucketNum);
         if(!union_task)
-            tower = new TowerSketch(_towerMem, CM, 15, MY_RANDOM_SEED);
+            tower = new TowerSketch(_towerMem, CM, 15, _init);
         else{
-            tower = new TowerSketch(_towerMem, CM, 7, MY_RANDOM_SEED);
+            tower = new TowerSketch(_towerMem, CM, 7, _init);
         }
         light_array_num = fermatEle->get_array_num();
         light_entry_num = fermatEle->get_entry_num();
@@ -312,6 +313,7 @@ public:
         printf("Decoded rate: %f\n", (double)Eleresult.size() / fermatEle->insertedflows.size());
         
         printf("-----------------------------------------------------------------------------\n");
+        have_decoded = true;
         return Eleresult.size();
     }
     uint32_t query(const char *key, bool add_undecoded = 1, bool ifprint = 0)
@@ -489,6 +491,7 @@ public:
     }
 
     void get_all_results(){ //Must be used after decoding
+        assert(have_decoded);
         for(int i = 0; i < heavy_bucket_num; i++){
             for(int j = 0; j < MAX_VALID_COUNTER; j++){
                 if(heavy_part->buckets[i].key[j] != 0){
@@ -516,6 +519,7 @@ public:
                 allResult[i.first] = i.second + 15;
             }
         }
+        have_got_all_result = 1;
     }
 
 
@@ -868,10 +872,12 @@ void Difference(DaVinci<bucket_num> &sketch1, DaVinci<bucket_num> &sketch2, DaVi
         }
     }
     // Light part
+    cout << "Lightpart array_num = " << array_num << ", entry_num = " << entry_num << endl;
     for (int i = 0; i < array_num; i++)
     {
         for (int j = 0; j < entry_num; j++)
         {
+            // cout << "i: " << i << ", j: " << j << endl;
             uint32_t sketch1_id = sketch1.fermatEle->get_id(i, j);
             uint32_t sketch2_id = sketch2.fermatEle->get_id(i, j);
             int32_t sketch1_counter = sketch1.fermatEle->get_counter(i, j);
@@ -915,16 +921,8 @@ void Difference(DaVinci<bucket_num> &sketch1, DaVinci<bucket_num> &sketch2, DaVi
     {
         uint32_t key = kickout_keys[i];
         int32_t val = kickout_vals[i];
-        if(key == 1699205447){
-            cout << "Inserting into lightpart " << key << ", val = " << val << endl;
-            cout << "id[0][4134176] = " << (uint32_t)(sketch3.fermatEle->get_id(0, 4134176)) << ", counter[0][4134176] = " << sketch3.fermatEle->get_counter(0, 4134176) << endl;
-        }
         // sketch3.fermatEle->Insert(key, val);
         sketch3.insert_after_heavy((char*)&key, val);
-        if(key == 1699205447){
-            cout << "After inserting..." << endl;
-            cout << "id[0][4134176] = " << (uint32_t)(sketch3.fermatEle->get_id(0, 4134176)) << ", counter[0][4134176] = " << sketch3.fermatEle->get_counter(0, 4134176) << endl;
-        }
     }
     cout << "Size of insertedflows in sketch1 is " << sketch1.fermatEle->insertedflows.size() << endl;
     cout << "Size of insertedflows in sketch2 is " << sketch2.fermatEle->insertedflows.size() << endl;
@@ -979,11 +977,9 @@ long double InnerProduct(DaVinci<bucket_num>& sketch1, DaVinci<bucket_num>& sket
     std::cout << "Fast inner product with only light part involved is " << innerProduct_light << std::endl;
     if(sketch1.have_decoded == 0){
         sketch1.decode(1);
-        sketch1.have_decoded = 1;
     }
     if(sketch2.have_decoded == 0){
         sketch2.decode(1);
-        sketch2.have_decoded = 1;
     }
     if(!enable_fast){
         innerProduct_light = 0;

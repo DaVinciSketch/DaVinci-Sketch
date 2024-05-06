@@ -42,7 +42,7 @@ fermat: ./fermat.cpp
 hashpipe: ./hashpipe.cpp
 	g++ -O2 -o ./build/hashpipe.out ./hashpipe.cpp
 mrac: ./mrac.cpp
-	g++ -O2 -o ./build/mrac.out ./mrac.cpp
+	g++ -O3 -o ./build/mrac.out ./mrac.cpp
 univmon: ./univmon.cpp
 	g++ -O2 -o ./build/univmon.out ./univmon.cpp
 

@@ -32,7 +32,33 @@ using std::vector;
 #define DATA_ROOT_15s "/data/data" // NUM_TRACE = 1, CAIDA
 #define MY_RANDOM_SEED 813
 
-int prime_seeds[] = {37, 43, 47, 53, 59, 61, 67, 71, 73, 79};
+int prime_seeds[] = {37, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, \
+                      103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, \
+                      163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, \
+                      227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, \
+                      281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, \
+                      353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, \
+                      421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, \
+                      487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, \
+                      569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, \
+                      631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, \
+                      701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, \
+                      773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, \
+                      857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, \
+                      937, 941, 947, 953, 967, 971, 977, 983, 991, 997, 1009, \
+                      1013, 1019, 1021, 1031, 1033, 1039, 1049, 1051, 1061, \
+                      1063, 1069, 1087, 1091, 1093, 1097, 1103, 1109, 1117, \
+                      1123, 1129, 1151, 1153, 1163, 1171, 1181, 1187, 1193, \
+                      1201, 1213, 1217, 1223, 1229, 1231, 1237, 1249, 1259, \
+                      1277, 1279, 1283, 1289, 1291, 1297, 1301, 1303, 1307, \
+                      1319, 1321, 1327, 1361, 1367, 1373, 1381, 1399, 1409, \
+                      1423, 1427, 1429, 1433, 1439, 1447, 1451, 1453, 1459, \
+                      1471, 1481, 1483, 1487, 1489, 1493, 1499, 1511, 1523, \
+                      1531, 1543, 1549, 1553, 1559, 1567, 1571, 1579, 1583, \
+                      1597, 1601, 1607, 1609, 1613, 1619, 1621, 1627, 1637,};
+
+
+
 
 struct SRCIP_TUPLE
 {
@@ -118,6 +144,45 @@ uint32_t myReadTraces()
   return total_pck_num;
 }
 
+uint32_t ReadTwoWindows()
+{
+  TRACE all_packets;
+  uint32_t total_pck_num = 0;
+  string filename130000 = "/home/FLC/ERSketch/datasample/0.dat";
+  char tmp[13] = {0};
+  FILE *file1 = fopen(filename130000.c_str(), "r");
+  if (file1 == NULL)
+  {
+    printf("[ERROR] file not open\n");
+    exit(0);
+  }
+  SRCIP_TUPLE key;
+  int window = 0;
+  if (!fread(tmp, 13, 1, file1)){
+    printf("[ERROR] file error!\n");
+    exit(0);
+  }
+  while (fread(tmp, 13, 1, file1))
+  {
+    memcpy(&key, tmp, 4);
+    all_packets.push_back(key);
+    total_pck_num++;
+  }
+  for(int i = 0; i < total_pck_num / 2; i++){
+    key = all_packets[i];
+    traces[0].push_back(key);
+  }
+  for(int i = total_pck_num / 2; i < total_pck_num; i++){
+    key = all_packets[i];
+    traces[1].push_back(key);
+  }
+  printf("[INFO] Scanned, packets number:\n");
+  fclose(file1);
+  printf("[INFO] window %02d has %ld packets\n", 0, traces[0].size());
+  printf("[INFO] window %02d has %ld packets\n", 1, traces[1].size());
+  return total_pck_num;
+}
+
 uint32_t ReadTraces()
 {
   double starttime, nowtime;
@@ -156,64 +221,67 @@ uint32_t ReadTraces()
   printf("\n\n");
   return total_pck_num;
 }
-uint32_t ReadTwoWindows()
-{
-  double starttime, nowtime;
-  uint32_t total_pck_num = 0;
-  string filename1 = "/home/FLC/ERSketch/datasample/0.dat";
-  // string filename1 = "/home/FLC/ERSketch/datasample/1.dat";
-  // string filename130000 = "../data/130000.dat";
-  char tmp[21] = {0};
-  // FILE *file1 = fopen(filename0.c_str(), "r");
-  FILE *file1 = fopen(filename1.c_str(), "r");
-  if (file1 == NULL)
-  {
-    printf("[ERROR] file not open\n");
-    exit(0);
-  }
-  SRCIP_TUPLE key;
-  int window = 0;
-  if (!fread(tmp, 21, 1, file1)){
-    printf("[ERROR] file error!\n");
-    exit(0);
-  }
-  starttime = *(double *)(tmp + 13);
-  while (fread(tmp, 21, 1, file1))
-  {
-    nowtime = *(double *)(tmp + 13);
-    if (nowtime - starttime >= 5.0)
-    {
-      cout << "Cumulated packets: " << total_pck_num << endl;
-      window++;
-      starttime = nowtime;
-    }
-    memcpy(&key, tmp, 4);
-    traces[window].push_back(key);
-    total_pck_num++;
-  }
-  window++;
-  cout << "total_packet_num: " << total_pck_num << endl;
-  cout << "window" << window <<endl;
-  printf("[INFO] 12 windows scanned, packets number:\n");
-  int cur_index = 0;
-  for(int i = 1; i < window; i++){
-    int cur_num = traces[i].size();
-    for(int j = 0; j < cur_num; j++){
-      key = traces[i][j];
-      traces[cur_index].push_back(key);
-      if(traces[cur_index].size() >= total_pck_num/2){
-        cur_index++;
-      }
-    }
-  } 
-  for (int i = 0; i < window; i++)
-    printf("[INFO] window %02d has %ld packets\n", i, traces[i].size());
-  printf("\n\n");
-  return total_pck_num;
-}
+// uint32_t ReadTwoWindows()
+// {
+//   double starttime, nowtime;
+//   uint32_t total_pck_num = 0;
+//   string filename1 = "/home/FLC/ERSketch/datasample/0.dat";
+//   // string filename1 = "/home/FLC/ERSketch/datasample/1.dat";
+//   // string filename130000 = "../data/130000.dat";
+//   char tmp[13] = {0};
+//   // FILE *file1 = fopen(filename0.c_str(), "r");
+//   FILE *file1 = fopen(filename1.c_str(), "r");
+//   if (file1 == NULL)
+//   {
+//     printf("[ERROR] file not open\n");
+//     exit(0);
+//   }
+//   SRCIP_TUPLE key;
+//   int window = 0;
+//   if (!fread(tmp, 13, 1, file1)){
+//     printf("[ERROR] file error!\n");
+//     exit(0);
+//   }
+//   starttime = *(double *)(tmp + 13);
+//   while (fread(tmp, 13, 1, file1))
+//   {
+//     nowtime = *(double *)(tmp + 13);
+//     if (nowtime - starttime >= 5.0)
+//     {
+//       cout << "Cumulated packets: " << total_pck_num << endl;
+//       window++;
+//       starttime = nowtime;
+//     }
+//     memcpy(&key, tmp, 4);
+//     traces[window].push_back(key);
+//     total_pck_num++;
+//   }
+//   window++;
+//   cout << "total_packet_num: " << total_pck_num << endl;
+//   cout << "window" << window <<endl;
+//   printf("[INFO] 12 windows scanned, packets number:\n");
+//   int cur_index = 0;
+//   for(int i = 1; i < window; i++){
+//     int cur_num = traces[i].size();
+//     for(int j = 0; j < cur_num; j++){
+//       key = traces[i][j];
+//       traces[cur_index].push_back(key);
+//       if(traces[cur_index].size() >= total_pck_num/2){
+//         cur_index++;
+//       }
+//     }
+//   } 
+//   for (int i = 0; i < window; i++)
+//     printf("[INFO] window %02d has %ld packets\n", i, traces[i].size());
+//   printf("\n\n");
+//   return total_pck_num;
+// }
 /************************** PREDEFINED NUMBERS***********************/
 #define HH_THRESHOLD 500 // 20,000,000 * 0.0005 (0.05%)
+// #define HH_THRESHOLD 350 // 20,000,000 * 0.0005 (0.05%)
 #define HC_THRESHOLD 250
+// #define HC_THRESHOLD 125
+// #define HC_THRESHOLD 500
 // #define HC_THRESHOLD 200
 // #define HC_THRESHOLD 20
 #define TOT_MEM 500

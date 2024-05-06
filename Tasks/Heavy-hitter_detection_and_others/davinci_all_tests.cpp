@@ -13,12 +13,21 @@ static constexpr int bucket_num = BUCKET_NUM;
 //     }
 // };
 
+double vector_mean(vector<double> &v){
+    double sum = 0;
+    for(auto &i : v){
+        sum += i;
+    }
+    return sum / v.size();
+}
+
 int main()
 {
     printf("Start accuracy measurement of tower_fermat: TOTAL_MEMORY %dKB, FERMAT_BUCKET %d\n", TOT_MEM, ELE_BUCKET);
     // uint32_t totnum_packet = ReadTraces();
     uint32_t totnum_packet = ReadTwoWindows();
-    std::ofstream outFile("outputs/davinci_all_tests.csv");
+    // return 0;
+    std::ofstream outFile("outputs/alltests/davinci_all_tests.csv");
     outFile << "TotalMem, HeavyNum, TowerMem, FermatMem, FlowSizeARE, HHF1, HCF1, CardRE, DistWMRE, EntrRE, UnionARE, DiffARE, InnerPARE, TotalTime\n";
 
     int array_num = 3;
@@ -39,7 +48,7 @@ int main()
     for(int mem = 25; mem <= 700; mem += 25){
         double alpha = (double)mem / 500.0;
         double hh_pre = 0;
-        int totaltime = 1;
+        int totaltime = 10;
         ave_card_RE = 0;
         vector<double> flowsizeprec; //v
         vector<double> hhf1; //v
@@ -51,21 +60,23 @@ int main()
         vector<double> diffare; // v
         vector<double> innerpare; //
         vector<double> totaltimevec;
+        int singletest_total_mem = alpha*500*1024;
+        int singletest_fermat_mem = alpha*24000;//160000;
+        int singletest_heavy_bucket_num = alpha*3100;
+        int singletest_tower_mem = alpha*512000 - singletest_fermat_mem - singletest_heavy_bucket_num*64;
         for (int times = 0; times < totaltime; times++)//TIMES; times++)
         {
+            int init_seed = prime_seeds[times*8];
             auto start = std::chrono::high_resolution_clock::now();
             std::cout << "times: " << times << std::endl;
             // davinci = new DaVinci<bucket_num>(alpha*500*1024,alpha*37800,alpha*3200,alpha*269400,3,false,813+times);
-            int singletest_total_mem = alpha*500*1024;
-            int singletest_fermat_mem = alpha*24000;//160000;
-            int singletest_heavy_bucket_num = alpha*3100;
-            int singletest_tower_mem = alpha*512000 - singletest_fermat_mem - singletest_heavy_bucket_num*64;
             cout << "singletest_fermat_mem: " << singletest_fermat_mem << " singletest_heavy_bucket_num: " << singletest_heavy_bucket_num << " singletest_tower_mem: " << singletest_tower_mem << endl;
             // davinci0 = new DaVinci<bucket_num>(alpha*500*1024, singletest_fermat_mem, singletest_heavy_bucket_num, singletest_tower_mem, 3, false,813+times);
             // davinci1 = new DaVinci<bucket_num>(alpha*500*1024, singletest_fermat_mem, singletest_heavy_bucket_num, singletest_tower_mem, 3, false,813+times);
-            unique_ptr<DaVinci<bucket_num>> davinci0 = make_unique<DaVinci<bucket_num>>(singletest_total_mem, singletest_fermat_mem, singletest_heavy_bucket_num, singletest_tower_mem, 3, false, 37);
-            unique_ptr<DaVinci<bucket_num>> davinci1 = make_unique<DaVinci<bucket_num>>(singletest_total_mem, singletest_fermat_mem, singletest_heavy_bucket_num, singletest_tower_mem, 3, false, 37);
+            unique_ptr<DaVinci<bucket_num>> davinci0 = make_unique<DaVinci<bucket_num>>(singletest_total_mem, singletest_fermat_mem, singletest_heavy_bucket_num, singletest_tower_mem, 3, false, init_seed);
+            unique_ptr<DaVinci<bucket_num>> davinci1 = make_unique<DaVinci<bucket_num>>(singletest_total_mem, singletest_fermat_mem, singletest_heavy_bucket_num, singletest_tower_mem, 3, false, init_seed);
             true_freqs[0].clear();
+            true_freqs[1].clear();
 
             // unordered_map<uint32_t, uint32_t> &true_freq = true_freqs[0];
             vector<int> true_dist(1);
@@ -84,16 +95,18 @@ int main()
                 davinci1->insert((const char *)(traces[1][i].key), 1);
             }
             //union
-            unique_ptr<DaVinci<bucket_num>> davinci_union_result = make_unique<DaVinci<bucket_num>>(singletest_total_mem, singletest_fermat_mem, singletest_heavy_bucket_num, singletest_tower_mem, 3, false, 37);
+            unique_ptr<DaVinci<bucket_num>> davinci_union_result = make_unique<DaVinci<bucket_num>>(singletest_total_mem, singletest_fermat_mem, singletest_heavy_bucket_num, singletest_tower_mem, 3, false, init_seed);
             Union<bucket_num>(*davinci0, *davinci1, *davinci_union_result, 37);
             
-            unique_ptr<DaVinci<bucket_num>> davinci_diff_result = make_unique<DaVinci<bucket_num>>(singletest_total_mem, singletest_fermat_mem, singletest_heavy_bucket_num, singletest_tower_mem, 3, false, 37);
+            unique_ptr<DaVinci<bucket_num>> davinci_diff_result = make_unique<DaVinci<bucket_num>>(singletest_total_mem, singletest_fermat_mem, singletest_heavy_bucket_num, singletest_tower_mem, 3, false, init_seed);
             Difference<bucket_num>(*davinci0, *davinci1, *davinci_diff_result, 37);
 
             long double innerpresult = InnerProduct<bucket_num>(*davinci0, *davinci1, 37); // will decode davinci0 and davinci1
 
+            auto start_dist = std::chrono::high_resolution_clock::now();
             vector<double> dist_result(10, 0);
             davinci0->get_distribution(dist_result, 0); // need decode
+            auto end_dist = std::chrono::high_resolution_clock::now();
 
             double entropy_result = davinci0->get_entropy(dist_result); // need distribution
 
@@ -119,6 +132,7 @@ int main()
                 }
             }
             flowSizeARE /= true_freqs[0].size();
+            flowsizeprec.push_back(flowSizeARE);
 
             // Start calculating HH F1
             double HH_precision = 0;
@@ -138,9 +152,17 @@ int main()
                 HH_RR += (HH_true.find(*itr) != HH_true.end());
             }
             HH_precision = (2 * (double(HH_PR) / double(HH_PR_denom)) * (double(HH_RR) / double(HH_RR_denom))) / ((double(HH_PR) / double(HH_PR_denom)) + (double(HH_RR) / double(HH_RR_denom)));
+            hhf1.push_back(HH_precision);
 
 
             // Start calculating HC F1
+            davinci1->get_all_results();
+            if(!(davinci0->have_got_all_result)||!(davinci1->have_got_all_result)){
+                printf("Error: not all results are got\n");
+                return 0;
+            }else{
+                printf("get all results ok\n");
+            }
             double HC_precision = 0;
             int HC_PR = 0;
             int HC_PR_denom = 0;
@@ -154,14 +176,18 @@ int main()
                         (int)davinci0->query((const char *)&f.first) >
                     HC_THRESHOLD)
                     est_hc.insert(f.first);
+                    // cout << (int)davinci1->query((const char *)&f.first) - (int)davinci0->query((const char *)&f.first) << ",";
             }
+            cout << endl;
             for (auto f : davinci0->allResult)
             {
                 if ((int)davinci0->query((const char *)&f.first) -
                         (int)davinci1->query((const char *)&f.first) >
                     HC_THRESHOLD)
                     est_hc.insert(f.first);
+                    // cout << (int)davinci0->query((const char *)&f.first) - (int)davinci1->query((const char *)&f.first) << ",";
             }
+            cout << endl;
             for (auto f : true_freqs[1])
             {
                 if (!true_freqs[0].count(f.first))
@@ -193,9 +219,11 @@ int main()
                 HC_RR += (real_hc.find(*itr) != real_hc.end());
             }
             HC_precision = (2 * (double(HC_PR) / double(HC_PR_denom)) * (double(HC_RR) / double(HC_RR_denom))) / ((double(HC_PR) / double(HC_PR_denom)) + (double(HC_RR) / double(HC_RR_denom)));
+            hcf1.push_back(HC_precision);
 
             // Start calciulating cardinality RE
             double cardER = abs(cardinality_result - int(true_freqs[0].size())) / double(true_freqs[0].size());
+            cardre.push_back(cardER);
 
             // Start calculating distribution WMRD and entropy RE
             vector<int> real_distribution(10, 0);
@@ -226,8 +254,10 @@ int main()
                 entr_true += i * real_distribution[i] * log2(i);
             }
             WMRD = WMRD_nom / WMRD_denom;
+            distwmre.push_back(WMRD);
             entropy_true = -entr_true / tot_true + log2(tot_true);
             double entropy_err = std::abs(entropy_result - entropy_true) / entropy_true;
+            entrre.push_back(entropy_err);
             
             //Start calculating Union ARE
             unordered_map<uint32_t, int32_t> union_real_result;
@@ -276,6 +306,7 @@ int main()
                 count++;
             }
             unionARE /= count;
+            unionare.push_back(unionARE);
 
             double diffARE = 0.0;
             count = 0;
@@ -288,6 +319,7 @@ int main()
                 count++;
             }
             diffARE /= count;
+            diffare.push_back(diffARE);
 
             // Start calculating Inner Product ARE
             long double real_innerproduct = 0;
@@ -296,14 +328,45 @@ int main()
                 real_innerproduct += (long double)it->second * (long double)true_freqs[1][it->first];
             }
             long double innerpRE = std::abs(innerpresult - real_innerproduct) / real_innerproduct;
+            innerpare.push_back(innerpRE);
 
             // Time Interval
             std::chrono::duration<double> diff = end - start;
+            std::chrono::duration<double> dist_dur = end_dist - start_dist;
+            totaltimevec.push_back(diff.count());
+
+            
 
             // Output
             // outFile << "TotalMem, HeavyNum, TowerMem, FermatMem, FlowSizeARE, HHF1, HCF1, CardRE, DistWMRE, EntrRE, UnionARE, DiffARE, InnerPARE, TotalTime\n";
-            outFile << singletest_total_mem << ", " << singletest_heavy_bucket_num << ", " << singletest_tower_mem << ", " << singletest_fermat_mem << ", " << flowSizeARE << ", " << HH_precision << ", " << HC_precision << ", " << cardER << ", " << WMRD << ", " << entropy_err << ", " << unionARE << ", " << diffARE << ", " << innerpRE << ", " << diff.count() << "\n";
+            // outFile << singletest_total_mem << ", " << singletest_heavy_bucket_num << ", " << singletest_tower_mem << ", " << singletest_fermat_mem << ", " << flowSizeARE << ", " << HH_precision << ", " << HC_precision << ", " << cardER << ", " << WMRD << ", " << entropy_err << ", " << unionARE << ", " << diffARE << ", " << innerpRE << ", " << diff.count() << "\n";
         }
+        outFile << singletest_total_mem << ", " << singletest_heavy_bucket_num << ", " << singletest_tower_mem << ", " << singletest_fermat_mem << ", " 
+        << vector_mean(flowsizeprec) << ", " << vector_mean(hhf1) << ", " << vector_mean(hcf1) << ", " << vector_mean(cardre) << ", " << vector_mean(distwmre) << ", " << vector_mean(entrre) << ", " << vector_mean(unionare) << ", " << vector_mean(diffare) << ", " << vector_mean(innerpare) << ", " << vector_mean(totaltimevec) << "\n";
+        // flowSizeARE << ", " << HH_precision << ", " << HC_precision << ", " << cardER << ", " << WMRD << ", " << entropy_err << ", " << unionARE << ", " << diffARE << ", " << innerpRE << ", " << diff.count() << "\n";
+        for(int i=0; i < 10; i ++){
+            cout << "flowsizeprec[" << i << "]: " << flowsizeprec[i] << ",";
+            cout << "hhf1[" << i << "]: " << hhf1[i] << ",";
+            cout << "hcf1[" << i << "]: " << hcf1[i] << ",";
+            cout << "cardre[" << i << "]: " << cardre[i] << ",";
+            cout << "distwmre[" << i << "]: " << distwmre[i] << ",";
+            cout << "entrre[" << i << "]: " << entrre[i] << ",";
+            cout << "unionare[" << i << "]: " << unionare[i] << ",";
+            cout << "diffare[" << i << "]: " << diffare[i] << ",";
+            cout << "innerpare[" << i << "]: " << innerpare[i] << ",";
+            cout << "totaltimevec[" << i << "]: " << totaltimevec[i] << endl;
+        }
+        flowsizeprec.clear();
+        hhf1.clear();
+        hcf1.clear();
+        cardre.clear();
+        distwmre.clear();
+        entrre.clear();
+        unionare.clear();
+        diffare.clear();
+        innerpare.clear();
+        totaltimevec.clear();
+
     }
     outFile.close();
 

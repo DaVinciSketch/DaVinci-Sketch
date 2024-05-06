@@ -1865,8 +1865,8 @@ public:
         hash_sign = new BOBHash32[array_num];
         for (int i = 0; i < array_num; ++i){
 
-            hash[i].initialize(prime_seeds[i]);
-            hash_sign[i].initialize(prime_seeds[i+3]);
+            hash[i].initialize(prime_seeds[_init]);
+            hash_sign[i].initialize(prime_seeds[_init+3]);
         }
 
         cout << "Finish initiating Fermat_Count_IDP_CNTPM_48bits with memory = " << _memory << " array_num = " << array_num << " entry_num = " << entry_num << endl;

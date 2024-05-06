@@ -240,11 +240,11 @@ public:
         }
         hash = new BOBHash32[2];
         hash_sign = new BOBHash32[2];
-        hash[0].initialize(prime_seeds[6]);
-        hash[1].initialize(prime_seeds[0]);
+        hash[0].initialize(prime_seeds[_init + 6]);
+        hash[1].initialize(prime_seeds[_init]);
         cout << "Tower hash1 init seed is " << _init + 1 << endl;
-        hash_sign[0].initialize(prime_seeds[7]);
-        hash_sign[1].initialize(prime_seeds[3]);
+        hash_sign[0].initialize(prime_seeds[_init + 7]);
+        hash_sign[1].initialize(prime_seeds[_init + 3]);
         mask2 = T;
         
         cardPrintTowerInfo(mem, mask1, mem/2, mask2, T, _type, maximum);

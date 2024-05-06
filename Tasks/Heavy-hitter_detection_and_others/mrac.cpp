@@ -1,10 +1,13 @@
 #include "./src/MRAC/MRAC.h"
+#include <chrono>
+#include <iostream>
 using namespace std;
 
 int main()
 {
     printf("Start accuracy measurement of MRAC\n");
-    uint32_t totnum_packet = ReadTraces();
+    uint32_t totnum_packet = ReadTwoWindows();
+    // uint32_t totnum_packet = ReadTraces();
     MRAC *mrac = NULL;
     unordered_map<uint32_t, uint32_t> true_freqs[1];
     double ave_WMRD = 0.0, ave_entr_RE = 0.0;
@@ -18,6 +21,8 @@ int main()
             vector<int> true_dist(1000000);
             mrac = new MRAC(MRAC_BYTES);
             int num_pkt = (int)traces[iter_data].size();
+
+            auto start = std::chrono::high_resolution_clock::now();
 
             for (int i = 0; i < num_pkt; ++i)
             {
@@ -36,6 +41,14 @@ int main()
 
             vector<double> dist;
             mrac->get_distribution(dist);
+
+            auto end = std::chrono::high_resolution_clock::now();
+
+            std::chrono::duration<double> diff = end - start;
+
+            cout << "Code executed in " << diff.count() << " seconds" << endl;
+
+            return 0;
 
             // compute WMRD
             double WMRD = 0;
