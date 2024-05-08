@@ -1,4 +1,4 @@
-# (Under construction)USSO: A Unified Sketch for Efficient & Comprehensive Set Operations
+# DaVinci Sketch: A Versatile Sketch for Efficient and Comprehensive Set Operations
 ## File Path
 Our implementation is under Tasks/Heavy-hitter_detection_and_others/src/ElasticRadar
 ## How to run
