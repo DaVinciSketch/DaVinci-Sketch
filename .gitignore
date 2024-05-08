@@ -20,3 +20,4 @@ Tasks/Heavy-hitter_detection_and_others/*.txt
 Makefile
 oldtests/
 zhy
+JoinSketch/
