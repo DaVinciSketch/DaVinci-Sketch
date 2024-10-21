@@ -1,0 +1,17 @@
+*.out
+*.csv
+*.sh
+*.dat
+garbagebin
+.vscode
+
+ERSketch.h
+ERSketch_Count.h
+ERtest.cpp
+data/
+datasample/
+elastic.cpp
+outputs
+Tasks/Heavy-hitter_detection_and_others/outputs/*.txt
+Tasks/Heavy-hitter_detection_and_others/*.txt
+Makefile
